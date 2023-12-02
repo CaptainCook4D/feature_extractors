@@ -25,7 +25,7 @@ class VideoFrameExtractor:
 			output_directory,
 	):
 		self.video_path = video_path
-		self.video_name = video_name
+		self.video_name = video_name[:-4]
 		
 		self.output_directory = output_directory
 		self.video_output_directory = os.path.join(self.output_directory, self.video_name)
@@ -59,7 +59,7 @@ class VideoDirectoryFrameExtractor:
 			self,
 			input_video_directory_path,
 			output_video_directory_path,
-			max_workers=5
+			max_workers=10
 	):
 		self.input_video_directory_path = input_video_directory_path
 		self.output_video_directory_path = output_video_directory_path
@@ -92,7 +92,7 @@ class VideoDirectoryFrameExtractor:
 
 if __name__ == "__main__":
 	video_directory_frame_extractor = VideoDirectoryFrameExtractor(
-		"/data/rohith/captain_cook/videos",
-		"/data/rohith/captain_cook/frames/gopro"
+		"/data/rohith/captain_cook/videos/resolution_360p",
+		"/data/rohith/captain_cook/frames/gopro/resolution_360p"
 	)
 	video_directory_frame_extractor.parallel_video_frame_extractor()
