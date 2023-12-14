@@ -1,4 +1,4 @@
-#importing necessary libraries
+# importing necessary libraries
 import os
 import sys
 import cv2
@@ -82,6 +82,7 @@ class TSMFeatureExtractor(nn.Module):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         return preprocess(frame)
+
 
 if __name__ == '__main__':
     n_segment = 8  # This should match the number used in TSMFeatureExtractor
