@@ -9,3 +9,4 @@ pytorchvideo
 einops
 timm
 pytorchvideo
+hydra-core
