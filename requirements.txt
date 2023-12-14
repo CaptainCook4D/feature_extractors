@@ -3,3 +3,9 @@ tqdm
 pandas
 numpy
 matplotlib
+transformers
+natsort
+pytorchvideo
+einops
+timm
+pytorchvideo
