@@ -132,6 +132,7 @@ if __name__ == '__main__':
         t.start()
 
     for root, dirs, files in os.walk(video_frames_directories_path):
+        print("CAN ACCESS DATA")
         video_name = os.path.basename(root)
         files.sort()
         for i in range(0, len(files), n_segment):
