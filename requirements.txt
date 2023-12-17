@@ -10,3 +10,6 @@ einops
 timm
 pytorchvideo
 hydra-core
+torch
+torchvision
+Pillow
