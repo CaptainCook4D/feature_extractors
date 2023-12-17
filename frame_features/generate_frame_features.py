@@ -1,6 +1,6 @@
 # importing necessary libraries
 import os
-import sys
+import argparse
 import cv2
 import torch
 import torchvision.transforms as transforms
@@ -10,6 +10,11 @@ from threading import Thread
 import queue
 from PIL import Image
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Script for processing methods.")
+    parser.add_argument("--backbone", type=str, default="tsm", help="Specify the method to be used.")
+    return parser.parse_args()
+
 class TemporalShift(nn.Module):
     #torch.Size([1, 8, 3, 224, 224])
     def __init__(self, n_segment, shift_div=8):
@@ -18,7 +23,6 @@ class TemporalShift(nn.Module):
         self.shift_div = shift_div
 
     def forward(self, x):
-        # x size: [N*T, C, H, W]
         N, T, C, H, W = x.size()
         x = x.view(N, T, C, H * W)
 
@@ -83,13 +87,15 @@ class TSMFeatureExtractor(nn.Module):
         ])
         return preprocess(frame)
 
-
 if __name__ == '__main__':
-    n_segment = 8  # This should match the number used in TSMFeatureExtractor
+    n_segment = 8
     tsm_features = TSMFeatureExtractor(n_segment)
+    args = parse_arguments()
+    method = args.backbone or "tsm"
 
-    dir_path = sys.argv[1]
-    video_features = {}
+    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
+    output_features_path = f"/data/rohith/captain_cook/features/gopro/{method}/"
+
     frame_queue = queue.Queue()
 
     def process_batch():
@@ -98,7 +104,10 @@ if __name__ == '__main__':
             if batch_info is None:
                 break
 
-            root, frames_batch = batch_info
+            video_name, root, frames_batch = batch_info
+            video_folder_path = os.path.join(output_features_path, video_name)
+            os.makedirs(video_folder_path, exist_ok=True)
+
             processed_frames = []
             for file in frames_batch:
                 frame_path = os.path.join(root, file)
@@ -109,33 +118,31 @@ if __name__ == '__main__':
                 processed_frames.append(frame)
 
             frame_tensor = torch.stack(processed_frames)
-            frame_tensor = frame_tensor.unsqueeze(0)  # Add an extra dimension for batch
+            frame_tensor = frame_tensor.unsqueeze(0)
 
             extracted_features = tsm_features(frame_tensor)
-            #video_features[os.path.join(root, str(frames_batch[0]))] = extracted_features
+            feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.pt")
+            torch.save(extracted_features, feature_file_path)
             frame_queue.task_done()
 
-    # Create a pool of worker threads
-    num_worker_threads = 4 
-    threads = []
-    for _ in range(num_worker_threads):
-        t = Thread(target=process_batch)
+    # Worker threads setup
+    num_worker_threads = 4
+    threads = [Thread(target=process_batch) for _ in range(num_worker_threads)]
+    for t in threads:
         t.start()
-        threads.append(t)
 
-    for root, dirs, files in os.walk(dir_path):
-        files.sort()  # Ensure the frames are sorted in the correct order
+    for root, dirs, files in os.walk(video_frames_directories_path):
+        video_name = os.path.basename(root)
+        files.sort()
         for i in range(0, len(files), n_segment):
             frames_batch = files[i:i + n_segment]
-            if len(frames_batch) != n_segment:
-                continue  # Skip if the last batch does not have enough frames
-            frame_queue.put((root, frames_batch))
+            if len(frames_batch) == n_segment:
+                frame_queue.put((video_name, root, frames_batch))
 
-    # Block until all tasks are done
     frame_queue.join()
 
-    # Stop the worker threads
-    for _ in range(num_worker_threads):
+    # Stop worker threads
+    for _ in threads:
         frame_queue.put(None)
     for t in threads:
         t.join()
