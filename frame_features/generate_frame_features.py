@@ -3,6 +3,7 @@ import os
 import argparse
 import cv2
 import torch
+import numpy as np
 import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.nn as nn
@@ -121,8 +122,9 @@ if __name__ == '__main__':
             frame_tensor = frame_tensor.unsqueeze(0)
 
             extracted_features = tsm_features(frame_tensor)
-            feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.pt")
-            torch.save(extracted_features, feature_file_path)
+            extracted_features_np = extracted_features.cpu().detach().numpy()
+            feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
+            np.savez(feature_file_path, extracted_features_np)
             frame_queue.task_done()
 
     # Worker threads setup
