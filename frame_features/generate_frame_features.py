@@ -110,6 +110,7 @@ if __name__ == '__main__':
             os.makedirs(video_folder_path, exist_ok=True)
 
             processed_frames = []
+            print("Extracting features for video: " + video_name + "\n")
             for file in frames_batch:
                 frame_path = os.path.join(root, file)
                 frame = cv2.imread(frame_path)
