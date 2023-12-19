@@ -10,6 +10,7 @@ import torch.nn as nn
 from threading import Thread
 import queue
 from PIL import Image
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
@@ -88,6 +89,27 @@ class TSMFeatureExtractor(nn.Module):
         ])
         return preprocess(frame)
 
+def process_batch(video_name, root, frames_batch):
+    video_folder_path = os.path.join(output_features_path, video_name)
+    os.makedirs(video_folder_path, exist_ok=True)
+
+    processed_frames = []
+    for file in frames_batch:
+        frame_path = os.path.join(root, file)
+        frame = cv2.imread(frame_path)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = Image.fromarray(frame)
+        frame = tsm_features.data_preprocessing(frame)
+        processed_frames.append(frame)
+
+    frame_tensor = torch.stack(processed_frames)
+    frame_tensor = frame_tensor.unsqueeze(0)
+
+    extracted_features = tsm_features(frame_tensor)
+    extracted_features_np = extracted_features.cpu().detach().numpy()
+    feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
+    np.savez(feature_file_path, extracted_features_np)
+
 if __name__ == '__main__':
     n_segment = 8
     tsm_features = TSMFeatureExtractor(n_segment)
@@ -97,55 +119,21 @@ if __name__ == '__main__':
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
     output_features_path = f"/data/rohith/captain_cook/features/gopro/{method}/"
 
-    frame_queue = queue.Queue()
-
-    def process_batch():
-        while True:
-            batch_info = frame_queue.get()
-            if batch_info is None:
-                break
-
-            video_name, root, frames_batch = batch_info
-            video_folder_path = os.path.join(output_features_path, video_name)
-            os.makedirs(video_folder_path, exist_ok=True)
-
-            processed_frames = []
-            for file in frames_batch:
-                frame_path = os.path.join(root, file)
-                frame = cv2.imread(frame_path)
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = Image.fromarray(frame)
-                frame = tsm_features.data_preprocessing(frame)
-                processed_frames.append(frame)
-
-            frame_tensor = torch.stack(processed_frames)
-            frame_tensor = frame_tensor.unsqueeze(0)
-
-            extracted_features = tsm_features(frame_tensor)
-            extracted_features_np = extracted_features.cpu().detach().numpy()
-            feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
-            np.savez(feature_file_path, extracted_features_np)
-            frame_queue.task_done()
-
-    # Worker threads setup
+    # ThreadPoolExecutor setup
     num_worker_threads = 4
-    threads = [Thread(target=process_batch) for _ in range(num_worker_threads)]
-    for t in threads:
-        t.start()
+    with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
+        futures = []
 
-    for root, dirs, files in os.walk(video_frames_directories_path):
-        video_name = os.path.basename(root)
-        print("Extracting features for " + video_name)
-        files.sort()
-        for i in range(0, len(files), n_segment):
-            frames_batch = files[i:i + n_segment]
-            if len(frames_batch) == n_segment:
-                frame_queue.put((video_name, root, frames_batch))
+        for root, dirs, files in os.walk(video_frames_directories_path):
+            video_name = os.path.basename(root)
+            print("Extracting features for " + video_name)
+            files.sort()
+            for i in range(0, len(files), n_segment):
+                frames_batch = files[i:i + n_segment]
+                if len(frames_batch) == n_segment:
+                    futures.append(executor.submit(process_batch, video_name, root, frames_batch))
 
-    frame_queue.join()
+        # Wait for all futures to complete
+        for future in as_completed(futures):
+            future.result()  # This line can be used to handle exceptions or results
 
-    # Stop worker threads
-    for _ in threads:
-        frame_queue.put(None)
-    for t in threads:
-        t.join()
