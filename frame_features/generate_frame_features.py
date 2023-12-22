@@ -10,6 +10,7 @@ import torch.nn as nn
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.decomposition import PCA
+import pickle as pkl
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
@@ -125,7 +126,7 @@ if __name__ == '__main__':
     output_features_path = f"/data/rohith/captain_cook/features/gopro/{method}/"
 
     # ThreadPoolExecutor setup
-    num_worker_threads = 4
+    num_worker_threads = 5
     with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
         futures = []
 
