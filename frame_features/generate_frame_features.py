@@ -80,8 +80,6 @@ class TSMFeatureExtractor(nn.Module):
         flattened_features = combined_features.reshape(-1)
         frame_features = self.pca_2048.fit_transform(flattened_features)
 
-        print(frame_features.size())
-
         return frame_features
 
     @staticmethod
