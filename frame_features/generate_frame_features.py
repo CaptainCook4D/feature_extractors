@@ -7,10 +7,9 @@ import numpy as np
 import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.nn as nn
-from threading import Thread
-import queue
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from sklearn.decomposition import PCA
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
@@ -47,6 +46,7 @@ class TSMFeatureExtractor(nn.Module):
     def __init__(self, n_segment):
         super(TSMFeatureExtractor, self).__init__()
         self.n_segment = n_segment
+        self.pca_2048 = PCA(n_components=2048)
 
         # ResNet-101 Neural Network for feature extraction
         network = models.resnet101(weights = models.ResNet101_Weights.IMAGENET1K_V1)
@@ -76,7 +76,10 @@ class TSMFeatureExtractor(nn.Module):
         N, T, C, H, W = combined_features.size()
         combined_features = combined_features.view(N * T, C, H, W)
 
-        return combined_features
+        flattened_features = combined_features.reshape(-1)
+        frame_features = self.pca_2048.fit_transform(flattened_features)
+
+        return frame_features
 
     @staticmethod
     def data_preprocessing(frame):
