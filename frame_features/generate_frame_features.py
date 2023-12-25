@@ -7,16 +7,32 @@ import numpy as np
 import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.nn as nn
+from threading import Thread
+import queue
+import logging
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.decomposition import PCA
+
+log_directory = os.path.join(os.getcwd(), 'logs')
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+
+log_file_path = os.path.join(log_directory, f"std.log")
+logging.basicConfig(filename=log_file_path, filemode='a', level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
+
+logger = logging.getLogger(__name__)
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
     parser.add_argument("--backbone", type=str, default="tsm", help="Specify the method to be used.")
     return parser.parse_args()
 
+
 class TemporalShift(nn.Module):
+    # torch.Size([1, 8, 3, 224, 224])
     def __init__(self, n_segment, shift_div=8):
         super(TemporalShift, self).__init__()
         self.n_segment = n_segment
@@ -30,11 +46,11 @@ class TemporalShift(nn.Module):
         zero_pad = torch.zeros((N, 1, C, H * W), device=x.device, dtype=x.dtype)
 
         # Shift forward
-        x = torch.cat((x[:, :-1], zero_pad), 1)  
+        x = torch.cat((x[:, :-1], zero_pad), 1)
 
         # Shift backward for some channels
         x_temp = x.clone()
-        x[:, 1:, :self.shift_div] = x_temp[:, :-1, :self.shift_div]  
+        x[:, 1:, :self.shift_div] = x_temp[:, :-1, :self.shift_div]
 
         x = x.view(N, T, C, H, W)
 
@@ -49,12 +65,12 @@ class TSMFeatureExtractor(nn.Module):
         # ResNet-101 Neural Network for feature extraction
         network = models.resnet101(weights = models.ResNet101_Weights.IMAGENET1K_V1)
         # Remove the last fully connected layer
-        modules = list(network.children())[:-1] 
+        modules = list(network.children())[:-1]
         self.resnet101 = nn.Sequential(*modules)
         self.pca_2048 = PCA(n_components=2048)
         for param in self.resnet101.parameters():
             param.requires_grad = False
-        
+
         self.tsm = TemporalShift(n_segment)
 
     def forward(self, x):
@@ -92,6 +108,7 @@ class TSMFeatureExtractor(nn.Module):
         ])
         return preprocess(frame)
 
+
 def process_batch(video_name, root, frames_batch):
     video_folder_path = os.path.join(output_features_path, video_name)
     os.makedirs(video_folder_path, exist_ok=True)
@@ -113,6 +130,7 @@ def process_batch(video_name, root, frames_batch):
     feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
     np.savez(feature_file_path, extracted_features_np)
 
+
 if __name__ == '__main__':
     n_segment = 8
     tsm_features = TSMFeatureExtractor(n_segment)
@@ -120,7 +138,7 @@ if __name__ == '__main__':
     method = args.backbone or "tsm"
 
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
-    output_features_path = f"/data/rohith/captain_cook/features/gopro/{method}/"
+    output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
 
     # ThreadPoolExecutor setup
     num_worker_threads = 4
@@ -137,5 +155,5 @@ if __name__ == '__main__':
                     futures.append(executor.submit(process_batch, video_name, root, frames_batch))
 
         for future in as_completed(futures):
-            future.result() 
+            future.result()
 

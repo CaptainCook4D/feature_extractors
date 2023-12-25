@@ -44,7 +44,7 @@ class ImageProcessor:
     def process_video(self, video_name, video_frames_directory_parent_path, output_features_path):
         video_frames_directory_path = os.path.join(video_frames_directory_parent_path, video_name)
 
-        batch_size = 500
+        batch_size = 600
         output_file_path = os.path.join(output_features_path, video_name)
         os.makedirs(output_features_path, exist_ok=True)
 
