@@ -65,8 +65,8 @@ class TSMFeatureExtractor(nn.Module):
 
         # ResNet-101 Neural Network for feature extraction
         network = models.resnet101(weights = models.ResNet101_Weights.IMAGENET1K_V1)
-        # Remove the last fully connected layer
-        modules = list(network.children())[:-1]
+        # Remove the last fully connected layer and avg pooling layer
+        modules = list(network.children())[:-2]
         self.resnet101 = nn.Sequential(*modules)
         self.pca_2048 = PCA(n_components=2048)
         for param in self.resnet101.parameters():
