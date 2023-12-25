@@ -137,7 +137,6 @@ if __name__ == '__main__':
                 if len(frames_batch) == n_segment:
                     futures.append(executor.submit(process_batch, video_name, root, frames_batch))
 
-        # Wait for all futures to complete
         for future in as_completed(futures):
-            future.result()  # This line can be used to handle exceptions or results
+            future.result() 
 
