@@ -18,7 +18,6 @@ def parse_arguments():
     return parser.parse_args()
 
 class TemporalShift(nn.Module):
-    #torch.Size([1, 8, 3, 224, 224])
     def __init__(self, n_segment, shift_div=8):
         super(TemporalShift, self).__init__()
         self.n_segment = n_segment
@@ -50,7 +49,8 @@ class TSMFeatureExtractor(nn.Module):
 
         # ResNet-101 Neural Network for feature extraction
         network = models.resnet101(weights = models.ResNet101_Weights.IMAGENET1K_V1)
-        modules = list(network.children())[:-1]  # Remove the last fully connected layer
+        # Remove the last fully connected layer
+        modules = list(network.children())[:-1] 
         self.resnet101 = nn.Sequential(*modules)
         self.pca_2048 = PCA(n_components=2048)
         for param in self.resnet101.parameters():
@@ -86,7 +86,7 @@ class TSMFeatureExtractor(nn.Module):
     def data_preprocessing(frame):
         '''Preprocess the frame'''
         preprocess = transforms.Compose([
-            transforms.Resize(256),
+            transforms.Resize(224),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
