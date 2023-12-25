@@ -121,7 +121,7 @@ if __name__ == '__main__':
     method = args.backbone or "tsm"
 
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
-    output_features_path = f"/data/rohith/captain_cook/features/gopro/{method}/"
+    output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
 
     # ThreadPoolExecutor setup
     num_worker_threads = 5
