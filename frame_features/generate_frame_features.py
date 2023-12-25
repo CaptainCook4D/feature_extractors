@@ -13,6 +13,7 @@ import logging
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.decomposition import PCA
+import pickle as pkl
 
 log_directory = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_directory):
@@ -108,13 +109,35 @@ class TSMFeatureExtractor(nn.Module):
         ])
         return preprocess(frame)
 
+#load_checkpoint to handle a dictionary of frames
+def load_checkpoint(video_name):
+    '''Load the last checkpoint if it exists'''
+    checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
+    if os.path.exists(checkpoint_path):
+        with open(checkpoint_path, 'rb') as f:
+            return pkl.load(f)
+    return {}
 
-def process_batch(video_name, root, frames_batch):
+#save_checkpoint to store frame names in a dictionary
+def save_checkpoint(video_name, frames_batch):
+    '''Save the current state to continue later'''
+    checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
+    finished_frames = load_checkpoint(video_name)
+    for frame in frames_batch:
+        finished_frames[frame] = True
+    with open(checkpoint_path, 'wb') as f:
+        pkl.dump(finished_frames, f)
+
+def process_batch(video_name, root, frames_batch, finished_frames):
     video_folder_path = os.path.join(output_features_path, video_name)
     os.makedirs(video_folder_path, exist_ok=True)
 
     processed_frames = []
     for file in frames_batch:
+        # Skip if frame is already processed
+        if finished_frames.get(file):
+            continue
+
         frame_path = os.path.join(root, file)
         frame = cv2.imread(frame_path)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -122,14 +145,15 @@ def process_batch(video_name, root, frames_batch):
         frame = tsm_features.data_preprocessing(frame)
         processed_frames.append(frame)
 
-    frame_tensor = torch.stack(processed_frames)
-    frame_tensor = frame_tensor.unsqueeze(0)
+    if processed_frames:
+        frame_tensor = torch.stack(processed_frames)
+        frame_tensor = frame_tensor.unsqueeze(0)
 
-    extracted_features = tsm_features(frame_tensor)
-    extracted_features_np = extracted_features.cpu().detach().numpy()
-    feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
-    np.savez(feature_file_path, extracted_features_np)
-
+        extracted_features = tsm_features(frame_tensor)
+        extracted_features_np = extracted_features.cpu().detach().numpy()
+        feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
+        np.savez(feature_file_path, extracted_features_np)
+        save_checkpoint(video_name, frames_batch)
 
 if __name__ == '__main__':
     n_segment = 8
@@ -144,15 +168,16 @@ if __name__ == '__main__':
     num_worker_threads = 4
     with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
         futures = []
-
         for root, dirs, files in os.walk(video_frames_directories_path):
             video_name = os.path.basename(root)
+            finished_frames = load_checkpoint(video_name)
+
             print("Extracting features for " + video_name)
             files.sort()
             for i in range(0, len(files), n_segment):
                 frames_batch = files[i:i + n_segment]
                 if len(frames_batch) == n_segment:
-                    futures.append(executor.submit(process_batch, video_name, root, frames_batch))
+                    futures.append(executor.submit(process_batch, video_name, root, frames_batch, finished_frames))
 
         for future in as_completed(futures):
             future.result()
