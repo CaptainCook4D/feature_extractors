@@ -31,12 +31,12 @@ class TemporalShift(nn.Module):
         # Zero padding for temporal dimension
         zero_pad = torch.zeros((N, 1, C, H * W), device=x.device, dtype=x.dtype)
 
-        # Shift operation
-        x = torch.cat((x[:, :-1], zero_pad), 1)  # Shift forward
+        # Shift forward
+        x = torch.cat((x[:, :-1], zero_pad), 1)  
 
-        # Use clone() to avoid in-place operation issues
+        # Shift backward for some channels
         x_temp = x.clone()
-        x[:, 1:, :self.shift_div] = x_temp[:, :-1, :self.shift_div]  # Shift backward for some channels
+        x[:, 1:, :self.shift_div] = x_temp[:, :-1, :self.shift_div]  
 
         x = x.view(N, T, C, H, W)
 
