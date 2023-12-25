@@ -102,7 +102,7 @@ class TSMFeatureExtractor(nn.Module):
     def data_preprocessing(frame):
         '''Preprocess the frame'''
         preprocess = transforms.Compose([
-            transforms.Resize(224),
+            transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -166,19 +166,23 @@ if __name__ == '__main__':
 
     # ThreadPoolExecutor setup
     num_worker_threads = 4
-    with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
-        futures = []
-        for root, dirs, files in os.walk(video_frames_directories_path):
-            video_name = os.path.basename(root)
-            finished_frames = load_checkpoint(video_name)
+    try:
+        with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
+            futures = []
+            for root, dirs, files in os.walk(video_frames_directories_path):
+                video_name = os.path.basename(root)
+                finished_frames = load_checkpoint(video_name)
 
-            print("Extracting features for " + video_name)
-            files.sort()
-            for i in range(0, len(files), n_segment):
-                frames_batch = files[i:i + n_segment]
-                if len(frames_batch) == n_segment:
-                    futures.append(executor.submit(process_batch, video_name, root, frames_batch, finished_frames))
+                print("Extracting features for " + video_name)
+                files.sort()
+                for i in range(0, len(files), n_segment):
+                    frames_batch = files[i:i + n_segment]
+                    if len(frames_batch) == n_segment:
+                        futures.append(executor.submit(process_batch, video_name, root, frames_batch, finished_frames))
 
-        for future in as_completed(futures):
-            future.result()
+            for future in as_completed(futures):
+                future.result()
+    except BaseException as e:  # Catching the exception
+        print("An error occurred:", e)
+
 
