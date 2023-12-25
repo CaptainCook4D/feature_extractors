@@ -10,7 +10,6 @@ import torch.nn as nn
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.decomposition import PCA
-import pickle as pkl
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
