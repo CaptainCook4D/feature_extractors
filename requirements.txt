@@ -13,3 +13,4 @@ hydra-core
 torch
 torchvision
 Pillow
+scikit-learn
