@@ -169,8 +169,10 @@ def process_batch(video_name, root, frames_batch, output_features_path):
             extracted_features_np = extracted_features.cpu().detach().numpy()
         else:
             extracted_features_np = extracted_features
+
         
         feature_map[frames_batch[0]] = extracted_features_np
+        print(f"Features for {frames_batch[0]}: " + feature_map)
         if len(feature_map.keys()) == total_files(video_name):
             feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
             np.savez(feature_file_path, feature_map)
