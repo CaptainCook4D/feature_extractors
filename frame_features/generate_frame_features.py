@@ -125,8 +125,8 @@ def total_files(video_name):
     return len(jpg_files)
 
 def process_batch(video_name, root, frames_batch, output_features_path, feature_map):
-    video_folder_path = os.path.join(output_features_path, video_name)
-    os.makedirs(video_folder_path, exist_ok=True)
+    #video_folder_path = os.path.join(output_features_path, video_name)
+    #os.makedirs(video_folder_path, exist_ok=True)
 
     processed_frames = []
     for file in frames_batch:
@@ -182,14 +182,13 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
             for root, dirs, files in os.walk(video_frames_directories_path):
                 video_name = os.path.basename(root)
 
-                print("Extracting features for " + video_name)
                 files.sort()
                 total_frames = len(files)
                 if batch_size is None:
                     batch_size = n_segment  # default batch size
 
                 # Ensure each batch has an equal number of frames
-                for i in range(0, total_frames, batch_size):
+                for i in range(0, total_frames, batch_size, desc=f"Extracting features from: {video_name}"):
                     frames_batch = files[i:i + batch_size]
                     if frames_batch:
                         queue.put((video_name, root, frames_batch, feature_map))
@@ -212,13 +211,13 @@ if __name__ == '__main__':
     args = parse_arguments()
     method = args.backbone or "tsm"
 
-    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/10_16_360p"
+    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
     os.makedirs(output_features_path, exist_ok=True)
 
     total_frames = total_files(video_frames_directories_path)
-    desired_num_batches = 300
+    desired_num_batches = 24
     batch_size = max(total_frames // desired_num_batches, 1)
 
     main(n_segment, video_frames_directories_path, output_features_path, batch_size)
