@@ -133,7 +133,7 @@ def total_files(video_name):
     jpg_files = glob.glob(video_name + "/" + pattern)
     return len(jpg_files)
 
-def process_batch(video_name, root, frames_batch, output_features_path, feature_map):
+def process_batch(video_name, root, frames_batch, feature_map):
     #video_folder_path = os.path.join(output_features_path, video_name)
     #os.makedirs(video_folder_path, exist_ok=True)
 
