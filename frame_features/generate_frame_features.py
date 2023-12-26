@@ -171,7 +171,7 @@ def process_batch(video_name, root, frames_batch, output_features_path, feature_
 
         
         feature_map[frames_batch[0]] = extracted_features_np
-        print(f"Features for {frames_batch[0]}: {feature_map}")
+        #print(f"Features for {frames_batch[0]}: {feature_map}")
         print("len of feature map: ", len(feature_map.keys()))
         if len(feature_map.keys()) == total_files(video_name):
             feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
