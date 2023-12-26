@@ -229,7 +229,7 @@ if __name__ == '__main__':
     args = parse_arguments()
     method = args.backbone or "tsm"
 
-    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
+    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/10_16_360p"
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
     os.makedirs(output_features_path, exist_ok=True)
