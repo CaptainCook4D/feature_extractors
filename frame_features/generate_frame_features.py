@@ -182,9 +182,9 @@ def worker(queue, output_features_path):
         task = queue.get()
         if task is None:
             break
-        video_name, root, frames_batch = task
+        video_name, root, frames_batch, feature_map = task
         try:
-            process_batch(video_name, root, frames_batch, output_features_path)
+            process_batch(video_name, root, frames_batch, output_features_path, feature_map)
         except BaseException as e:
             print("An error occurred while processing:", e)
         finally:
