@@ -154,7 +154,10 @@ def process_batch(video_name, root, frames_batch, finished_frames, output_featur
         frame_tensor = frame_tensor.unsqueeze(0)
 
         extracted_features = tsm_features(frame_tensor)
-        extracted_features_np = extracted_features.numpy()
+        if isinstance(extracted_features, torch.Tensor):
+            extracted_features_np = extracted_features.cpu().detach().numpy()
+        else:
+            extracted_features_np = extracted_features
         feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
         np.savez(feature_file_path, extracted_features_np)
         save_checkpoint(video_name, frames_batch, output_features_path)
