@@ -177,7 +177,7 @@ def worker(queue, output_features_path):
 
 def main(n_segment, video_frames_directories_path, method):
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
-    num_worker_threads = 1 
+    num_worker_threads = 4
 
     # Create the queue and the worker threads
     queue = Queue()
