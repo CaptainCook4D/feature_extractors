@@ -110,7 +110,7 @@ class TSMFeatureExtractor(nn.Module):
         return preprocess(frame)
 
 #load_checkpoint to handle a dictionary of frames
-def load_checkpoint(video_name):
+def load_checkpoint(video_name, output_features_path):
     '''Load the last checkpoint if it exists'''
     checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
     if os.path.exists(checkpoint_path):
@@ -119,7 +119,7 @@ def load_checkpoint(video_name):
     return {}
 
 #save_checkpoint to store frame names in a dictionary
-def save_checkpoint(video_name, frames_batch):
+def save_checkpoint(video_name, frames_batch, output_features_path):
     '''Save the current state to continue later'''
     checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
     finished_frames = load_checkpoint(video_name)
@@ -128,7 +128,7 @@ def save_checkpoint(video_name, frames_batch):
     with open(checkpoint_path, 'wb') as f:
         pkl.dump(finished_frames, f)
 
-def process_batch(video_name, root, frames_batch, finished_frames):
+def process_batch(video_name, root, frames_batch, finished_frames, output_features_path):
     video_folder_path = os.path.join(output_features_path, video_name)
     os.makedirs(video_folder_path, exist_ok=True)
 
@@ -153,36 +153,65 @@ def process_batch(video_name, root, frames_batch, finished_frames):
         extracted_features_np = extracted_features.cpu().detach().numpy()
         feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
         np.savez(feature_file_path, extracted_features_np)
-        save_checkpoint(video_name, frames_batch)
+        save_checkpoint(video_name, frames_batch, output_features_path)
+
+def worker(queue, output_features_path):
+    while True:
+        task = queue.get()
+        if task is None:
+            break
+        video_name, root, frames_batch, finished_frames = task
+        try:
+            process_batch(video_name, root, frames_batch, finished_frames, output_features_path)
+        except BaseException as e:
+            print("An error occurred while processing:", e)
+        finally:
+            queue.task_done()
+
+def main(n_segment, video_frames_directories_path, method):
+    output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
+    num_worker_threads = 1 
+
+    # Create the queue and the worker threads
+    q = queue()
+    threads = []
+    for _ in range(num_worker_threads):
+        t = Thread(target=worker, args=(q,output_features_path,))
+        t.start()
+        threads.append(t)
+
+    try:
+        for root, dirs, files in os.walk(video_frames_directories_path):
+            video_name = os.path.basename(root)
+            finished_frames = load_checkpoint(video_name, output_features_path)
+
+            print("Extracting features for " + video_name)
+            files.sort()
+            for i in range(0, len(files), n_segment):
+                frames_batch = files[i:i + n_segment]
+                if len(frames_batch) == n_segment:
+                    queue.put((video_name, root, frames_batch, finished_frames))
+    except BaseException as e:
+        print("An error occurred:", e)
+
+    # Block until all tasks are done
+    q.join()
+
+    # Stop workers
+    for i in range(num_worker_threads):
+        q.put(None)
+    for t in threads:
+        t.join()
 
 if __name__ == '__main__':
     n_segment = 8
-    tsm_features = TSMFeatureExtractor(n_segment)
+    tsm_features = TSMFeatureExtractor(n_segment) 
     args = parse_arguments()
     method = args.backbone or "tsm"
 
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
-    output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
+    
+    main(n_segment, video_frames_directories_path, method)
 
-    # ThreadPoolExecutor setup
-    num_worker_threads = 4
-    try:
-        with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
-            futures = []
-            for root, dirs, files in os.walk(video_frames_directories_path):
-                video_name = os.path.basename(root)
-                finished_frames = load_checkpoint(video_name)
-
-                print("Extracting features for " + video_name)
-                files.sort()
-                for i in range(0, len(files), n_segment):
-                    frames_batch = files[i:i + n_segment]
-                    if len(frames_batch) == n_segment:
-                        futures.append(executor.submit(process_batch, video_name, root, frames_batch, finished_frames))
-
-            for future in as_completed(futures):
-                future.result()
-    except BaseException as e:  # Catching the exception
-        print("An error occurred:", e)
 
 
