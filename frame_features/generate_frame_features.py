@@ -158,9 +158,6 @@ def worker(queue, output_features_path):
         video_name, root, frames_batch, feature_map = task
         try:
             feature_map = process_batch(video_name, root, frames_batch, output_features_path, feature_map)
-            feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
-            np.savez(feature_file_path, feature_map)
-            logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
         except BaseException as e:
             print("An error occurred while processing:", e)
         finally:
@@ -194,6 +191,10 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
                     frames_batch = files[i:i + batch_size]
                     if frames_batch:
                         queue.put((video_name, root, frames_batch, feature_map))
+                
+                feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
+                np.savez(feature_file_path, feature_map)
+                logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
 
     except BaseException as e:
         print("An error occurred:", e)
