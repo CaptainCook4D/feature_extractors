@@ -146,10 +146,9 @@ def process_batch(video_name, root, frames_batch, output_features_path, feature_
             extracted_features_np = extracted_features
 
         feature_map.append(extracted_features_np)
-        #print(f"Features for {frames_batch[0]}: {feature_map}")
-        #print("len of feature map: ", len(feature_map))
-        feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
-        np.savez(feature_file_path, feature_map)
+    
+    return feature_map
+    
 
 def worker(queue, output_features_path):
     while True:
@@ -158,7 +157,10 @@ def worker(queue, output_features_path):
             break
         video_name, root, frames_batch, feature_map = task
         try:
-            process_batch(video_name, root, frames_batch, output_features_path, feature_map)
+            feature_map = process_batch(video_name, root, frames_batch, output_features_path, feature_map)
+            feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
+            np.savez(feature_file_path, feature_map)
+            logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
         except BaseException as e:
             print("An error occurred while processing:", e)
         finally:
@@ -211,13 +213,13 @@ if __name__ == '__main__':
     args = parse_arguments()
     method = args.backbone or "tsm"
 
-    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
+    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/10_16_360p"
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
     os.makedirs(output_features_path, exist_ok=True)
 
     total_frames = total_files(video_frames_directories_path)
-    desired_num_batches = 24
+    desired_num_batches = 25
     batch_size = max(total_frames // desired_num_batches, 1)
 
     main(n_segment, video_frames_directories_path, output_features_path, batch_size)
