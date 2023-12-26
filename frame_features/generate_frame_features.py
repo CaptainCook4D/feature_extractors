@@ -118,12 +118,17 @@ class TSMFeatureExtractor(nn.Module):
 
 #load_checkpoint to handle a dictionary of frames
 def load_checkpoint(video_name, output_features_path):
-    '''Load the last checkpoint if it exists'''
+    '''Load the last checkpoint if it exists and is not empty'''
     checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
-    if os.path.exists(checkpoint_path):
-        with open(checkpoint_path, 'rb') as f:
-            return pkl.load(f)
+    if os.path.exists(checkpoint_path) and os.path.getsize(checkpoint_path) > 0:
+        try:
+            with open(checkpoint_path, 'rb') as f:
+                return pkl.load(f)
+        except EOFError:
+            logger.error(f"Empty or corrupted checkpoint file: {checkpoint_path}")
+            return {}
     return {}
+
 
 #save_checkpoint to store frame names in a dictionary
 def save_checkpoint(video_name, frames_batch, output_features_path):
