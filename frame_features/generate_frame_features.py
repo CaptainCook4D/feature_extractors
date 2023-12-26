@@ -208,8 +208,8 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
                 
                 for video_name, features in feature_map.items():
                     feature_file_path = os.path.join(output_features_path, video_name)
-                    np.savez(feature_file_path, *features)
-                    logger.info(f"Saved features for video {video_name} at {feature_file_path}")
+                    np.savez(f"{feature_file_path}.npz", *features)
+                    logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
 
     except BaseException as e:
         print("An error occurred:", e)
