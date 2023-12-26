@@ -68,7 +68,7 @@ class TSMFeatureExtractor(nn.Module):
         # Remove the last fully connected layer and avg pooling layer
         modules = list(network.children())[:-2]
         self.resnet101 = nn.Sequential(*modules)
-        self.pca_2048 = PCA(n_components=2048)
+        self.pca_2048 = None
         for param in self.resnet101.parameters():
             param.requires_grad = False
 
@@ -89,17 +89,22 @@ class TSMFeatureExtractor(nn.Module):
         # Step 3: Combining the original and shifted features
         combined_features = torch.cat((original_features, shifted_features), dim=2)
 
-        # Reshape for final output
+        # Reshape for PCA: Flatten the features
         N, T, C, H, W = combined_features.size()
-        combined_features = combined_features.view(N * T, C * H * W)  # Flatten the features
+        combined_features = combined_features.view(N * T, C * H * W)
 
-        # Check if the features are in the form of a single sample
-        if combined_features.ndim == 1:
-            combined_features = combined_features.reshape(1, -1)  # Reshape from (n_features,) to (1, n_features)
+        n_samples, n_features = combined_features.shape
+        n_components = min(n_features, 2048)
 
+        # Initialize PCA if it hasn't been done or if the dimensions have changed
+        if not hasattr(self, 'pca_2048') or self.pca_2048.n_components != n_components:
+            self.pca_2048 = PCA(n_components=n_components)
+
+        # Step 4: Apply PCA to reduce dimensions to 2048
         frame_features = self.pca_2048.fit_transform(combined_features)
 
         return frame_features
+
 
     @staticmethod
     def data_preprocessing(frame):
@@ -177,11 +182,10 @@ def main(n_segment, video_frames_directories_path, method):
 
     # Create the queue and the worker threads
     queue = Queue()
-    threads = []
-    for _ in range(num_worker_threads):
-        t = Thread(target=worker, args=(queue,output_features_path,))
+
+    threads = [Thread(target=process_batch) for _ in range(num_worker_threads)]
+    for t in threads:
         t.start()
-        threads.append(t)
 
     try:
         for root, dirs, files in os.walk(video_frames_directories_path):
@@ -213,7 +217,7 @@ if __name__ == '__main__':
     method = args.backbone or "tsm"
 
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
-    
+
     main(n_segment, video_frames_directories_path, method)
 
 
