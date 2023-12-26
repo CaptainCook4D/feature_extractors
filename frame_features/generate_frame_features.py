@@ -186,10 +186,13 @@ def main(n_segment, video_frames_directories_path, output_features_path):
 
                 print("Extracting features for " + video_name)
                 files.sort()
+                
                 for i in range(0, len(files), n_segment):
+                    print("Frames being ")
                     frames_batch = files[i:i + n_segment]
                     if len(frames_batch) == n_segment:
                         queue.put((video_name, root, frames_batch, feature_map))
+
     except BaseException as e:
         print("An error occurred:", e)
 
