@@ -14,4 +14,4 @@ torch
 torchvision
 Pillow
 scikit-learn
-glob
+glob2
