@@ -216,7 +216,7 @@ if __name__ == '__main__':
     os.makedirs(output_features_path, exist_ok=True)
 
     total_frames = total_files(video_frames_directories_path)
-    desired_num_batches = 25
+    desired_num_batches = 300
     batch_size = max(total_frames // desired_num_batches, 1)
 
     main(n_segment, video_frames_directories_path, output_features_path, batch_size)
