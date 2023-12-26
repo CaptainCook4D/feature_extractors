@@ -183,9 +183,11 @@ def main(n_segment, video_frames_directories_path, method):
     # Create the queue and the worker threads
     queue = Queue()
 
-    threads = [Thread(target=process_batch) for _ in range(num_worker_threads)]
-    for t in threads:
+    threads = []
+    for _ in range(num_worker_threads):
+        t = Thread(target=worker, args=(queue,output_features_path,))
         t.start()
+        threads.append(t)
 
     try:
         for root, dirs, files in os.walk(video_frames_directories_path):
