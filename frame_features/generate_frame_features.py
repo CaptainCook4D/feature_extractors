@@ -27,6 +27,7 @@ logging.basicConfig(filename=log_file_path, filemode='a', level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 feature_lock = Lock()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
@@ -73,11 +74,12 @@ class TSMFeatureExtractor(nn.Module):
         #self.pca_2048 = None
         for param in self.resnet101.parameters():
             param.requires_grad = False
-
-        self.tsm = TemporalShift(n_segment)
+        self.resnet101 = self.resnet101.to(device)  # Move the model to GPU
+        self.tsm = TemporalShift(n_segment).to(device)
 
     def forward(self, x):
         # Step 1: Feature extraction with ResNet-101
+        x = x.to(device)
         N, T, C, H, W = x.size()
         x = x.view(N * T, C, H, W)
         original_features = self.resnet101(x)
@@ -91,22 +93,9 @@ class TSMFeatureExtractor(nn.Module):
         # Step 3: Combining the original and shifted features
         combined_features = torch.cat((original_features, shifted_features), dim=2)
 
-        # Reshape for PCA: Flatten the features
-        #N, T, C, H, W = combined_features.size()
-        #combined_features = combined_features.view(N * T, C * H * W)
-
-        #n_samples, n_features = combined_features.shape
-        #n_components = n_components = min(2048, n_samples, n_features)
-
-        #if self.pca_2048 is None or self.pca_2048.n_components != n_components:
-        #    self.pca_2048 = PCA(n_components=n_components)
-
-        # Step 4: Apply PCA to reduce dimensions to 2048
-        #frame_features = self.pca_2048.fit_transform(combined_features)
         flattened = combined_features.view(combined_features.size(0), -1)
 
         # Linear layer to get to the desired feature size of 2048
-        # You need as many inputs as the flattened features have
         fc = torch.nn.Linear(in_features=flattened.size(1), out_features=2048)
 
         # Reshape to (n, 2048)
@@ -123,10 +112,7 @@ class TSMFeatureExtractor(nn.Module):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
-        return preprocess(frame)
-
-def delete_checkpoint(path):
-    os.remove(path)
+        return preprocess(frame).to(device)
 
 def total_files(video_name):
     pattern = '*.jpg'
@@ -134,9 +120,6 @@ def total_files(video_name):
     return len(jpg_files)
 
 def process_batch(video_name, root, frames_batch, feature_map):
-    #video_folder_path = os.path.join(output_features_path, video_name)
-    #os.makedirs(video_folder_path, exist_ok=True)
-
     processed_frames = []
     for file in frames_batch:
         frame_path = os.path.join(root, file)
@@ -148,6 +131,7 @@ def process_batch(video_name, root, frames_batch, feature_map):
         frame_tensor = torch.stack(processed_frames)
         frame_tensor = frame_tensor.unsqueeze(0)
 
+        frame_tensor = frame_tensor.to(device)
         extracted_features = tsm_features(frame_tensor)
         if isinstance(extracted_features, torch.Tensor):
             extracted_features_np = extracted_features.cpu().detach().numpy()
@@ -225,7 +209,7 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
 
 if __name__ == '__main__':
     n_segment = 8
-    tsm_features = TSMFeatureExtractor(n_segment) 
+    tsm_features = TSMFeatureExtractor(n_segment).to(device)
     args = parse_arguments()
     method = args.backbone or "tsm"
 
