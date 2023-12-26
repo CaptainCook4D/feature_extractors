@@ -91,10 +91,13 @@ class TSMFeatureExtractor(nn.Module):
 
         # Reshape for final output
         N, T, C, H, W = combined_features.size()
-        combined_features = combined_features.view(N * T, C, H, W)
+        combined_features = combined_features.view(N * T, C * H * W)  # Flatten the features
 
-        flattened_features = combined_features.reshape(-1)
-        frame_features = self.pca_2048.fit_transform(flattened_features)
+        # Check if the features are in the form of a single sample
+        if combined_features.ndim == 1:
+            combined_features = combined_features.reshape(1, -1)  # Reshape from (n_features,) to (1, n_features)
+
+        frame_features = self.pca_2048.fit_transform(combined_features)
 
         return frame_features
 
