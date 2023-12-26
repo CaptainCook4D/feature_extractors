@@ -14,7 +14,7 @@ from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.decomposition import PCA
 import pickle as pkl
-import glob
+import glob2 as glob
 
 log_directory = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_directory):
