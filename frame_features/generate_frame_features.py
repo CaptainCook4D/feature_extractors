@@ -137,7 +137,6 @@ def save_checkpoint(video_name, frames_batch, output_features_path):
 def process_batch(video_name, root, frames_batch, finished_frames, output_features_path):
     video_folder_path = os.path.join(output_features_path, video_name)
     os.makedirs(video_folder_path, exist_ok=True)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     processed_frames = []
     for file in frames_batch:
@@ -147,7 +146,7 @@ def process_batch(video_name, root, frames_batch, finished_frames, output_featur
 
         frame_path = os.path.join(root, file)
         frame = Image.open(frame_path)
-        frame = tsm_features.data_preprocessing(frame).to(device)
+        frame = tsm_features.data_preprocessing(frame)
         processed_frames.append(frame)
 
     if processed_frames:
@@ -155,7 +154,7 @@ def process_batch(video_name, root, frames_batch, finished_frames, output_featur
         frame_tensor = frame_tensor.unsqueeze(0)
 
         extracted_features = tsm_features(frame_tensor)
-        extracted_features_np = extracted_features.cpu().detach().numpy()
+        extracted_features_np = extracted_features.numpy()
         feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
         np.savez(feature_file_path, extracted_features_np)
         save_checkpoint(video_name, frames_batch, output_features_path)
