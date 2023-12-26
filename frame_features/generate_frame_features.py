@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.nn as nn
 from threading import Thread
-import queue
+from queue import Queue
 import logging
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -173,10 +173,10 @@ def main(n_segment, video_frames_directories_path, method):
     num_worker_threads = 1 
 
     # Create the queue and the worker threads
-    q = queue()
+    queue = Queue()
     threads = []
     for _ in range(num_worker_threads):
-        t = Thread(target=worker, args=(q,output_features_path,))
+        t = Thread(target=worker, args=(queue,output_features_path,))
         t.start()
         threads.append(t)
 
@@ -195,11 +195,11 @@ def main(n_segment, video_frames_directories_path, method):
         print("An error occurred:", e)
 
     # Block until all tasks are done
-    q.join()
+    queue.join()
 
     # Stop workers
     for i in range(num_worker_threads):
-        q.put(None)
+        queue.put(None)
     for t in threads:
         t.join()
 
