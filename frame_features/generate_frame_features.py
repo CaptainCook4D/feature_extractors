@@ -189,8 +189,7 @@ def worker(queue, output_features_path):
         finally:
             queue.task_done()
 
-def main(n_segment, video_frames_directories_path, method):
-    output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
+def main(n_segment, video_frames_directories_path, output_features_path):
     num_worker_threads = 4
 
     # Create the queue and the worker threads
@@ -234,7 +233,10 @@ if __name__ == '__main__':
 
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p"
 
-    main(n_segment, video_frames_directories_path, method)
+    output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
+    os.makedirs(output_features_path, exist_ok=True)
+
+    main(n_segment, video_frames_directories_path, output_features_path)
 
 
 
