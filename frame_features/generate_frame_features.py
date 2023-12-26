@@ -128,7 +128,7 @@ def load_checkpoint(video_name, output_features_path):
 def save_checkpoint(video_name, frames_batch, output_features_path):
     '''Save the current state to continue later'''
     checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
-    finished_frames = load_checkpoint(video_name)
+    finished_frames = load_checkpoint(video_name, output_features_path)
     for frame in frames_batch:
         finished_frames[frame] = True
     with open(checkpoint_path, 'wb') as f:
