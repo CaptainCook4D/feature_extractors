@@ -66,19 +66,16 @@ class TSMFeatureExtractor(nn.Module):
         super(TSMFeatureExtractor, self).__init__()
         self.n_segment = n_segment
 
-        # ResNet-101 Neural Network for feature extraction
         network = models.resnet101(weights = models.ResNet101_Weights.IMAGENET1K_V1)
-        # Remove the last fully connected layer and avg pooling layer
+
         modules = list(network.children())[:-2]
         self.resnet101 = nn.Sequential(*modules)
-        #self.pca_2048 = None
         for param in self.resnet101.parameters():
             param.requires_grad = False
         self.resnet101 = self.resnet101.to(device)  # Move the model to GPU
         self.tsm = TemporalShift(n_segment).to(device)
 
     def forward(self, x):
-        # Step 1: Feature extraction with ResNet-101
         x = x.to(device)
         N, T, C, H, W = x.size()
         x = x.view(N * T, C, H, W)
