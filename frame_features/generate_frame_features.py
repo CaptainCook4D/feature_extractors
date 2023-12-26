@@ -134,8 +134,6 @@ def process_batch(video_name, root, frames_batch, feature_map):
             extracted_features_np = extracted_features.cpu().detach().numpy()
         else:
             extracted_features_np = extracted_features
-
-        feature_map.append(extracted_features_np)
     
     with feature_lock:
         feature_map[video_name].append(extracted_features_np)
