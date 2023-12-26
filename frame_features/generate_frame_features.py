@@ -148,12 +148,11 @@ def total_files(video_name):
     jpg_files = glob.glob(video_name + "/" + pattern)
     return len(jpg_files)
 
-def process_batch(video_name, root, frames_batch, output_features_path):
+def process_batch(video_name, root, frames_batch, output_features_path, feature_map):
     video_folder_path = os.path.join(output_features_path, video_name)
     os.makedirs(video_folder_path, exist_ok=True)
 
     processed_frames = []
-    feature_map = {}
     for file in frames_batch:
         frame_path = os.path.join(root, file)
         frame = Image.open(frame_path)
@@ -173,6 +172,7 @@ def process_batch(video_name, root, frames_batch, output_features_path):
         
         feature_map[frames_batch[0]] = extracted_features_np
         print(f"Features for {frames_batch[0]}: {feature_map}")
+        print("len of feature map: " + len(feature_map.keys()))
         if len(feature_map.keys()) == total_files(video_name):
             feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
             np.savez(feature_file_path, feature_map)
@@ -197,6 +197,7 @@ def main(n_segment, video_frames_directories_path, output_features_path):
     queue = Queue()
 
     threads = []
+    feature_map = {}
     for _ in range(num_worker_threads):
         t = Thread(target=worker, args=(queue,output_features_path,))
         t.start()
@@ -212,7 +213,7 @@ def main(n_segment, video_frames_directories_path, output_features_path):
                 for i in range(0, len(files), n_segment):
                     frames_batch = files[i:i + n_segment]
                     if len(frames_batch) == n_segment:
-                        queue.put((video_name, root, frames_batch))
+                        queue.put((video_name, root, frames_batch, feature_map))
     except BaseException as e:
         print("An error occurred:", e)
 
