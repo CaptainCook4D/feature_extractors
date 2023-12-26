@@ -14,6 +14,7 @@ from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.decomposition import PCA
 import pickle as pkl
+import glob
 
 log_directory = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_directory):
@@ -134,11 +135,20 @@ def save_checkpoint(video_name, frames_batch, output_features_path):
     with open(checkpoint_path, 'wb') as f:
         pkl.dump(finished_frames, f)
 
+def delete_checkpoint(path):
+    os.remove(path)
+
+def total_files(video_name):
+    pattern = '*.jpg'
+    jpg_files = glob.glob(video_name + "/" + pattern)
+    return len(jpg_files)
+
 def process_batch(video_name, root, frames_batch, finished_frames, output_features_path):
     video_folder_path = os.path.join(output_features_path, video_name)
     os.makedirs(video_folder_path, exist_ok=True)
 
     processed_frames = []
+    feature_map = {}
     for file in frames_batch:
         # Skip if frame is already processed
         if finished_frames.get(file):
@@ -158,9 +168,13 @@ def process_batch(video_name, root, frames_batch, finished_frames, output_featur
             extracted_features_np = extracted_features.cpu().detach().numpy()
         else:
             extracted_features_np = extracted_features
-        feature_file_path = os.path.join(video_folder_path, f"{frames_batch[0]}.npz")
-        np.savez(feature_file_path, extracted_features_np)
+        
+        feature_map[frames_batch[0]] = extracted_features_np
         save_checkpoint(video_name, frames_batch, output_features_path)
+        if len(feature_map.keys()) == total_files(video_name):
+            feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
+            np.savez(feature_file_path, feature_map)
+            delete_checkpoint(video_folder_path)
 
 def worker(queue, output_features_path):
     while True:
@@ -189,16 +203,17 @@ def main(n_segment, video_frames_directories_path, method):
         threads.append(t)
 
     try:
-        for root, dirs, files in os.walk(video_frames_directories_path):
-            video_name = os.path.basename(root)
-            finished_frames = load_checkpoint(video_name, output_features_path)
+        if os.path.getsize(output_features_path) > 0:
+            for root, dirs, files in os.walk(video_frames_directories_path):
+                video_name = os.path.basename(root)
+                finished_frames = load_checkpoint(video_name, output_features_path)
 
-            print("Extracting features for " + video_name)
-            files.sort()
-            for i in range(0, len(files), n_segment):
-                frames_batch = files[i:i + n_segment]
-                if len(frames_batch) == n_segment:
-                    queue.put((video_name, root, frames_batch, finished_frames))
+                print("Extracting features for " + video_name)
+                files.sort()
+                for i in range(0, len(files), n_segment):
+                    frames_batch = files[i:i + n_segment]
+                    if len(frames_batch) == n_segment:
+                        queue.put((video_name, root, frames_batch, finished_frames))
     except BaseException as e:
         print("An error occurred:", e)
 
