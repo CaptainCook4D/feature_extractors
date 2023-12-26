@@ -137,6 +137,7 @@ def save_checkpoint(video_name, frames_batch, output_features_path):
 def process_batch(video_name, root, frames_batch, finished_frames, output_features_path):
     video_folder_path = os.path.join(output_features_path, video_name)
     os.makedirs(video_folder_path, exist_ok=True)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     processed_frames = []
     for file in frames_batch:
@@ -145,10 +146,8 @@ def process_batch(video_name, root, frames_batch, finished_frames, output_featur
             continue
 
         frame_path = os.path.join(root, file)
-        frame = cv2.imread(frame_path)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = Image.fromarray(frame)
-        frame = tsm_features.data_preprocessing(frame)
+        frame = Image.open(frame_path)
+        frame = tsm_features.data_preprocessing(frame).to(device)
         processed_frames.append(frame)
 
     if processed_frames:
