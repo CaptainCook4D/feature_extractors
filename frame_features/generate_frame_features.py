@@ -147,10 +147,9 @@ def process_batch(video_name, root, frames_batch, output_features_path, feature_
 
         feature_map.append(extracted_features_np)
         #print(f"Features for {frames_batch[0]}: {feature_map}")
-        print("len of feature map: ", len(feature_map))
-        if len(feature_map.keys()) == total_files(video_name):
-            feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
-            np.savez(feature_file_path, feature_map)
+        #print("len of feature map: ", len(feature_map))
+        feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
+        np.savez(feature_file_path, feature_map)
 
 def worker(queue, output_features_path):
     while True:
