@@ -204,7 +204,7 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
                 for i in range(0, total_frames, batch_size):
                     frames_batch = files[i:i + batch_size]
                     if frames_batch:
-                        queue.put((video_name, root, frames_batch, feature_map))
+                        queue.put((video_name, root, frames_batch))
                 
                 for video_name, features in feature_map.items():
                     feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
