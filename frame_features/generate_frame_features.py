@@ -116,30 +116,6 @@ class TSMFeatureExtractor(nn.Module):
         ])
         return preprocess(frame)
 
-#load_checkpoint to handle a dictionary of frames
-#def load_checkpoint(video_name, output_features_path):
-#    '''Load the last checkpoint if it exists and is not empty'''
-#    checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
-#    if os.path.exists(checkpoint_path) and os.path.getsize(checkpoint_path) > 0:
-#        try:
-#            with open(checkpoint_path, 'rb') as f:
-#                return pkl.load(f)
-#        except EOFError:
-#            logger.error(f"Empty or corrupted checkpoint file: {checkpoint_path}")
-#            return {}
-#    return {}
-
-
-#save_checkpoint to store frame names in a dictionary
-#def save_checkpoint(video_name, frames_batch, output_features_path):
-#    '''Save the current state to continue later'''
-#    checkpoint_path = os.path.join(output_features_path, video_name, 'checkpoint.pkl')
-#    finished_frames = load_checkpoint(video_name, output_features_path)
-#    for frame in frames_batch:
-#        finished_frames[frame] = True
-#    with open(checkpoint_path, 'wb') as f:
-#        pkl.dump(finished_frames, f)
-
 def delete_checkpoint(path):
     os.remove(path)
 
@@ -191,7 +167,7 @@ def worker(queue, output_features_path):
             queue.task_done()
 
 def main(n_segment, video_frames_directories_path, output_features_path):
-    num_worker_threads = 4
+    num_worker_threads = 1
 
     # Create the queue and the worker threads
     queue = Queue()
