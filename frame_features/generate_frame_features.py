@@ -166,7 +166,7 @@ def worker(queue, output_features_path):
         finally:
             queue.task_done()
 
-def main(n_segment, video_frames_directories_path, output_features_path):
+def main(n_segment, video_frames_directories_path, output_features_path, batch_size=None):
     num_worker_threads = 1
 
     # Create the queue and the worker threads
@@ -186,11 +186,14 @@ def main(n_segment, video_frames_directories_path, output_features_path):
 
                 print("Extracting features for " + video_name)
                 files.sort()
-                
-                for i in range(0, len(files), n_segment):
-                    print("Frames being ")
-                    frames_batch = files[i:i + n_segment]
-                    if len(frames_batch) == n_segment:
+                total_frames = len(files)
+                if batch_size is None:
+                    batch_size = n_segment  # default batch size
+
+                # Ensure each batch has an equal number of frames
+                for i in range(0, total_frames, batch_size):
+                    frames_batch = files[i:i + batch_size]
+                    if frames_batch:
                         queue.put((video_name, root, frames_batch, feature_map))
 
     except BaseException as e:
@@ -216,7 +219,11 @@ if __name__ == '__main__':
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
     os.makedirs(output_features_path, exist_ok=True)
 
-    main(n_segment, video_frames_directories_path, output_features_path)
+    total_frames = total_files(video_frames_directories_path)
+    desired_num_batches = 300
+    batch_size = max(total_frames // desired_num_batches, 1)
+
+    main(n_segment, video_frames_directories_path, output_features_path, batch_size)
 
 
 
