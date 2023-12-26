@@ -1,4 +1,5 @@
 # importing necessary libraries
+from collections import defaultdict
 import os
 import argparse
 import cv2
@@ -7,11 +8,10 @@ import numpy as np
 import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.nn as nn
-from threading import Thread
+from threading import Thread, Lock
 from queue import Queue
 import logging
 from PIL import Image
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.decomposition import PCA
 import pickle as pkl
 import glob2 as glob
@@ -26,6 +26,7 @@ logging.basicConfig(filename=log_file_path, filemode='a', level=logging.INFO,
 
 logger = logging.getLogger(__name__)
 
+feature_lock = Lock()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
@@ -69,7 +70,7 @@ class TSMFeatureExtractor(nn.Module):
         # Remove the last fully connected layer and avg pooling layer
         modules = list(network.children())[:-2]
         self.resnet101 = nn.Sequential(*modules)
-        self.pca_2048 = None
+        #self.pca_2048 = None
         for param in self.resnet101.parameters():
             param.requires_grad = False
 
@@ -91,17 +92,25 @@ class TSMFeatureExtractor(nn.Module):
         combined_features = torch.cat((original_features, shifted_features), dim=2)
 
         # Reshape for PCA: Flatten the features
-        N, T, C, H, W = combined_features.size()
-        combined_features = combined_features.view(N * T, C * H * W)
+        #N, T, C, H, W = combined_features.size()
+        #combined_features = combined_features.view(N * T, C * H * W)
 
-        n_samples, n_features = combined_features.shape
-        n_components = n_components = min(2048, n_samples, n_features)
+        #n_samples, n_features = combined_features.shape
+        #n_components = n_components = min(2048, n_samples, n_features)
 
-        if self.pca_2048 is None or self.pca_2048.n_components != n_components:
-            self.pca_2048 = PCA(n_components=n_components)
+        #if self.pca_2048 is None or self.pca_2048.n_components != n_components:
+        #    self.pca_2048 = PCA(n_components=n_components)
 
         # Step 4: Apply PCA to reduce dimensions to 2048
-        frame_features = self.pca_2048.fit_transform(combined_features)
+        #frame_features = self.pca_2048.fit_transform(combined_features)
+        flattened = combined_features.view(combined_features.size(0), -1)
+
+        # Linear layer to get to the desired feature size of 2048
+        # You need as many inputs as the flattened features have
+        fc = torch.nn.Linear(in_features=flattened.size(1), out_features=2048)
+
+        # Reshape to (n, 2048)
+        frame_features = fc(flattened)
 
         return frame_features
 
@@ -147,17 +156,20 @@ def process_batch(video_name, root, frames_batch, output_features_path, feature_
 
         feature_map.append(extracted_features_np)
     
+    with feature_lock:
+        feature_map[video_name].append(extracted_features_np)
+    
     return feature_map
     
 
-def worker(queue, output_features_path):
+def worker(queue, feature_map):
     while True:
         task = queue.get()
         if task is None:
             break
-        video_name, root, frames_batch, feature_map = task
+        video_name, root, frames_batch = task
         try:
-            feature_map = process_batch(video_name, root, frames_batch, output_features_path, feature_map)
+            process_batch(video_name, root, frames_batch, feature_map)
         except BaseException as e:
             print("An error occurred while processing:", e)
         finally:
@@ -170,9 +182,10 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
     queue = Queue()
 
     threads = []
-    feature_map = []
+    feature_map = defaultdict(list)  # Changed to a dictionary to hold features for each video
+    
     for _ in range(num_worker_threads):
-        t = Thread(target=worker, args=(queue,output_features_path,))
+        t = Thread(target=worker, args=(queue, feature_map))
         t.start()
         threads.append(t)
 
@@ -193,9 +206,10 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
                     if frames_batch:
                         queue.put((video_name, root, frames_batch, feature_map))
                 
-                feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
-                np.savez(feature_file_path, feature_map)
-                logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
+                for video_name, features in feature_map.items():
+                    feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
+                    np.savez(feature_file_path, *features)
+                    logger.info(f"Saved features for video {video_name} at {feature_file_path}")
 
     except BaseException as e:
         print("An error occurred:", e)
