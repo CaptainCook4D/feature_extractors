@@ -94,9 +94,8 @@ class TSMFeatureExtractor(nn.Module):
         combined_features = combined_features.view(N * T, C * H * W)
 
         n_samples, n_features = combined_features.shape
-        n_components = min(n_features, 2048)
+        n_components = n_components = min(2048, n_samples, n_features)
 
-        # Initialize PCA if it hasn't been done or if the dimensions have changed
         if self.pca_2048 is None or self.pca_2048.n_components != n_components:
             self.pca_2048 = PCA(n_components=n_components)
 
@@ -104,7 +103,6 @@ class TSMFeatureExtractor(nn.Module):
         frame_features = self.pca_2048.fit_transform(combined_features)
 
         return frame_features
-
 
     @staticmethod
     def data_preprocessing(frame):
