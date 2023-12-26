@@ -97,7 +97,7 @@ class TSMFeatureExtractor(nn.Module):
         n_components = min(n_features, 2048)
 
         # Initialize PCA if it hasn't been done or if the dimensions have changed
-        if not hasattr(self, 'pca_2048') or self.pca_2048.n_components != n_components:
+        if self.pca_2048 is None or self.pca_2048.n_components != n_components:
             self.pca_2048 = PCA(n_components=n_components)
 
         # Step 4: Apply PCA to reduce dimensions to 2048
