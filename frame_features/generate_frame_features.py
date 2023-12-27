@@ -118,25 +118,28 @@ def total_files(video_name):
 
 def process_batch(video_name, root, frames_batch, feature_map):
     processed_frames = []
-    for file in frames_batch:
-        frame_path = os.path.join(root, file)
-        frame = Image.open(frame_path)
-        frame = tsm_features.data_preprocessing(frame)
-        processed_frames.append(frame)
+    try:
+        for file in frames_batch:
+            frame_path = os.path.join(root, file)
+            frame = Image.open(frame_path)
+            frame = tsm_features.data_preprocessing(frame)
+            processed_frames.append(frame)
 
-    if processed_frames:
-        frame_tensor = torch.stack(processed_frames)
-        frame_tensor = frame_tensor.unsqueeze(0)
+        if processed_frames:
+            frame_tensor = torch.stack(processed_frames)
+            frame_tensor = frame_tensor.unsqueeze(0)
 
-        frame_tensor = frame_tensor.to(device)
-        extracted_features = tsm_features(frame_tensor)
-        if isinstance(extracted_features, torch.Tensor):
-            extracted_features_np = extracted_features.cpu().detach().numpy()
-        else:
-            extracted_features_np = extracted_features
-    
-    with feature_lock:
-        feature_map[video_name].append(extracted_features_np)
+            frame_tensor = frame_tensor.to(device)
+            extracted_features = tsm_features(frame_tensor)
+            if isinstance(extracted_features, torch.Tensor):
+                extracted_features_np = extracted_features.cpu().detach().numpy()
+            else:
+                extracted_features_np = extracted_features
+        
+        with feature_lock:
+            feature_map[video_name].append(extracted_features_np)
+    except BaseException as e:
+        print("Error occurred in process_batch: ", e)
     
     return feature_map
     
