@@ -139,7 +139,7 @@ def process_batch(video_name, root, frames_batch, feature_map):
         with feature_lock:
             feature_map[video_name].append(extracted_features_np)
 
-        print("feature_map: ", feature_map)
+        #print("feature_map: ", feature_map)
     except BaseException as e:
         print("Error occurred in process_batch: ", e)
     
@@ -180,20 +180,21 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
 
                 files.sort()
                 total_frames = len(files)
-                if batch_size is None:
-                    batch_size = n_segment  # default batch size
+                chosen_frames = files[:8]
+                #if batch_size is None:
+                #    batch_size = n_segment  # default batch size
 
                 # Ensure each batch has an equal number of frames
                 print(f"Extracting features from: {video_name}")
-                for i in range(0, total_frames, batch_size):
-                    frames_batch = files[i:i + batch_size]
-                    if frames_batch:
-                        queue.put((video_name, root, frames_batch))
+                #for i in range(0, total_frames, batch_size):
+                #    frames_batch = files[i:i + batch_size]
+                #    if frames_batch:
+                queue.put((video_name, root, chosen_frames))
                 
                 for video_name, features in feature_map.items():
                     feature_file_path = os.path.join(output_features_path, video_name)
                     np.savez(f"{feature_file_path}.npz", *features)
-                    logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
+                logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
 
     except BaseException as e:
         print("An error occurred:", e)
@@ -213,14 +214,13 @@ if __name__ == '__main__':
     args = parse_arguments()
     method = args.backbone or "tsm"
 
-    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/10_16_360p"
+    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/10_16_360p/"
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
     os.makedirs(output_features_path, exist_ok=True)
 
     total_frames = total_files(video_frames_directories_path)
-    desired_num_batches = 600
-    batch_size = max(total_frames // desired_num_batches, 1)
+    batch_size = max(1200, 1)
 
     main(n_segment, video_frames_directories_path, output_features_path, batch_size)
 
