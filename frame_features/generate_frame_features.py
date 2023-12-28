@@ -12,8 +12,6 @@ from threading import Thread, Lock
 from queue import Queue
 import logging
 from PIL import Image
-from sklearn.decomposition import PCA
-import pickle as pkl
 import glob2 as glob
 
 log_directory = os.path.join(os.getcwd(), 'logs')
@@ -145,11 +143,9 @@ def process_batch(video_name, root, frames_batch, feature_map):
 
             extracted_features_np = extracted_features_np.flatten()
 
-            print("Dimension: " , extracted_features_np.size)
         with feature_lock:
             feature_map[video_name].append(extracted_features_np)
 
-        print("feature_map: ", feature_map)
     except BaseException as e:
         print("Error occurred in process_batch: ", e)
     
@@ -169,7 +165,7 @@ def worker(queue, feature_map):
         finally:
             queue.task_done()
 
-def main(n_segment, video_frames_directories_path, output_features_path, batch_size=None):
+def main(n_segment, video_frames_directories_path, output_features_path):
     num_worker_threads = 1
 
     # Create the queue and the worker threads
@@ -190,14 +186,14 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
 
                 files.sort()
                 total_frames = len(files)
-                chosen_frames = files[:16]
-                #if batch_size is None:
-                #    batch_size = n_segment  # default batch size
 
                 # Ensure each batch has an equal number of frames
                 print(f"Extracting features from: {video_name}")
-                for i in range(0, total_frames, 8):
-                    frames_batch = chosen_frames[i:i + batch_size]
+                for i in range(0, total_frames, n_segment):
+                    if i + n_segment > total_frames:
+                        frames_batch = files[i: ]
+                    else:
+                        frames_batch = files[i:i + n_segment]
                     if frames_batch:
                         queue.put((video_name, root, frames_batch))
 
@@ -220,7 +216,7 @@ if __name__ == '__main__':
     args = parse_arguments()
     method = args.backbone or "tsm"
 
-    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/10_16_360p"
+    video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/"
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
     os.makedirs(output_features_path, exist_ok=True)
@@ -228,7 +224,7 @@ if __name__ == '__main__':
     total_frames = total_files(video_frames_directories_path)
     batch_size = max(1200, 1)
 
-    main(n_segment, video_frames_directories_path, output_features_path, batch_size)
+    main(n_segment, video_frames_directories_path, output_features_path)
 
 
 
