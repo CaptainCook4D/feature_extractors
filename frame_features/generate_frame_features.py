@@ -192,6 +192,7 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
                 queue.put((video_name, root, chosen_frames))
                 
                 for video_name, features in feature_map.items():
+                    print("Saving file")
                     feature_file_path = os.path.join(output_features_path, video_name)
                     np.savez(f"{feature_file_path}.npz", *features)
                     logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
