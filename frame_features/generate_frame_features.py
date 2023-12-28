@@ -116,6 +116,13 @@ def total_files(video_name):
     jpg_files = glob.glob(video_name + "/" + pattern)
     return len(jpg_files)
 
+def save_features(output_features_path, feature_map):
+    for video_name, features in feature_map.items():
+        if features:  # Check if there are features to save
+            feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
+            np.savez(feature_file_path, *features)
+            logger.info(f"Saved features for video {video_name} at {feature_file_path}")
+
 def process_batch(video_name, root, frames_batch, feature_map):
     processed_frames = []
     try:
@@ -135,7 +142,8 @@ def process_batch(video_name, root, frames_batch, feature_map):
                 extracted_features_np = extracted_features.cpu().detach().numpy()
             else:
                 extracted_features_np = extracted_features
-        
+
+            print("Dimension: " , extracted_features_np.size)
         with feature_lock:
             feature_map[video_name].append(extracted_features_np)
 
@@ -190,18 +198,13 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
                 #    frames_batch = files[i:i + batch_size]
                 #    if frames_batch:
                 queue.put((video_name, root, chosen_frames))
+
+        queue.join()
                 
-                for video_name, features in feature_map.items():
-                    print("Saving file")
-                    feature_file_path = os.path.join(output_features_path, video_name)
-                    np.savez(f"{feature_file_path}.npz", *features)
-                    logger.info(f"Saved features for video {video_name} at {feature_file_path}.npz")
+        save_features(output_features_path, feature_map)
 
     except BaseException as e:
         print("An error occurred:", e)
-
-    # Block until all tasks are done
-    queue.join()
 
     # Stop workers
     for i in range(num_worker_threads):
