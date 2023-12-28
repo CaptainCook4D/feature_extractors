@@ -188,7 +188,7 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
 
                 files.sort()
                 total_frames = len(files)
-                chosen_frames = files[:8]
+                chosen_frames = files[:16]
                 #if batch_size is None:
                 #    batch_size = n_segment  # default batch size
 
