@@ -143,6 +143,8 @@ def process_batch(video_name, root, frames_batch, feature_map):
             else:
                 extracted_features_np = extracted_features
 
+            extracted_features_np = extracted_features_np.flatten()
+
             print("Dimension: " , extracted_features_np.size)
         with feature_lock:
             feature_map[video_name].append(extracted_features_np)
