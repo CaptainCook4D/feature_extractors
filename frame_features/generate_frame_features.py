@@ -147,7 +147,7 @@ def process_batch(video_name, root, frames_batch, feature_map):
         with feature_lock:
             feature_map[video_name].append(extracted_features_np)
 
-        #print("feature_map: ", feature_map)
+        print("feature_map: ", feature_map)
     except BaseException as e:
         print("Error occurred in process_batch: ", e)
     
