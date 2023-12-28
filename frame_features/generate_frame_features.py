@@ -194,10 +194,10 @@ def main(n_segment, video_frames_directories_path, output_features_path, batch_s
 
                 # Ensure each batch has an equal number of frames
                 print(f"Extracting features from: {video_name}")
-                #for i in range(0, total_frames, batch_size):
-                #    frames_batch = files[i:i + batch_size]
-                #    if frames_batch:
-                queue.put((video_name, root, chosen_frames))
+                for i in range(0, total_frames, 8):
+                    frames_batch = chosen_frames[i:i + batch_size]
+                    if frames_batch:
+                        queue.put((video_name, root, frames_batch))
 
         queue.join()
                 
