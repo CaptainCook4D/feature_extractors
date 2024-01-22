@@ -11,7 +11,7 @@ import logging
 from PIL import Image
 import glob2 as glob
 import concurrent.futures
-import tqdm
+from tqdm import tqdm
 
 log_directory = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_directory):
@@ -80,7 +80,6 @@ class Processor():
 
     @staticmethod
     def frame_processing(frame):
-        print("Processing frames ============")
         preprocess = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
@@ -92,7 +91,6 @@ class Processor():
     @staticmethod
     def process_batch(batch_frames, tsm_extractor):
         try:
-            print("Processing batches ==========")
             batch_features = []
             n_segment = 8
             for i in range(0, len(batch_frames), n_segment):
@@ -121,7 +119,6 @@ class Processor():
             batch_size = 1000
             video_features = []
             for i in tqdm(range(0, len(frames), batch_size), desc=f"TSM Feature Extraction for video: {video_name}"):
-                print("Executing processor ==========")
                 batch_frames = []
                 batch_names = []
                 for frame in frames[i:i+batch_size]:
