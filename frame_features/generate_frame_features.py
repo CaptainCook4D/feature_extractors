@@ -107,6 +107,7 @@ class Processor():
         
         return batch_features
 
+    @staticmethod
     def process_video(video_name, video_frames_directories_path, output_features_path):
         video_directory = os.path.join(video_frames_directories_path, video_name)
         feature_path = os.path.join(output_features_path,  video_name)
