@@ -124,7 +124,7 @@ class Processor():
                 for frame in frames[i:i+batch_size]:
                     frame_path = os.path.join(video_directory, frame)
                     image = Image.open(frame_path)
-                    print("image")
+                    #print("image")
                     image = Processor.frame_processing(image)
                     batch_frames.append(image)
                     batch_names.append(frame)
@@ -132,7 +132,7 @@ class Processor():
                 batch_frames = torch.stack(batch_frames).squeeze(dim=1)
                 batch_frames = batch_frames.unsqueeze(dim=2)
 
-                print("batch_features")
+                #print("batch_features")
                 batch_features = Processor.process_batch(batch_frames, tsm_extractor)
 
                 video_features.append(batch_features)
