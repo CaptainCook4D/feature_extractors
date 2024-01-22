@@ -137,7 +137,7 @@ class Processor():
 
 def main():
     n_segment = 8
-    tsm_features = TSMFeatureExtractor(n_segment).to(device)
+    tsm_features = TSMFeatureExtractor(n_segment)
     args = parse_arguments()
     method = args.backbone or "tsm"
 
