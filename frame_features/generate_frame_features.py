@@ -81,6 +81,7 @@ class Processor():
         self.tsm_extractor = tsm_features
 
     def frame_processing(frame):
+        print("Processing frames ============")
         preprocess = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
