@@ -42,6 +42,7 @@ class TSMFeatureExtractor():
             param.requires_grad = False
         self.resnet101 = self.resnet101.to(device)
 
+    @staticmethod
     def temporal_shift(x):
         print("Executing TSM =============")
         N, T, C, H, W = x.size()
@@ -95,7 +96,7 @@ class Processor():
             n_segment = 8
             for i in range(0, len(batch_frames), n_segment):
                 frame = batch_frames[i:i+n_segment]
-                extracted_features = tsm_extractor(frame)
+                extracted_features = tsm_extractor.tsm_features(frame)
                 if isinstance(extracted_features, torch.Tensor):
                     extracted_features_np = extracted_features.cpu().detach().numpy()
                 else:
@@ -140,6 +141,7 @@ class Processor():
             video_features = np.vstack(video_features)
             np.savez(f"{feature_path}.npz", video_features)
             logger.info(f"Saved featured for video {video_name} at {feature_path}")
+            print("\n")
 
         except BaseException as e:
             print("Error in execution of process_video: ",e)
