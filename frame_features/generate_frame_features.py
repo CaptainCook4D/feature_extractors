@@ -1,18 +1,17 @@
-# importing necessary libraries
+#import libraries
 from collections import defaultdict
 import os
 import argparse
-import cv2
 import torch
 import numpy as np
 import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.nn as nn
-from threading import Thread, Lock
-from queue import Queue
 import logging
 from PIL import Image
 import glob2 as glob
+import concurrent.futures
+import tqdm
 
 log_directory = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_directory):
@@ -23,8 +22,6 @@ logging.basicConfig(filename=log_file_path, filemode='a', level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
 
 logger = logging.getLogger(__name__)
-
-feature_lock = Lock()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def parse_arguments():
@@ -32,110 +29,99 @@ def parse_arguments():
     parser.add_argument("--backbone", type=str, default="tsm", help="Specify the method to be used.")
     return parser.parse_args()
 
-
-class TemporalShift(nn.Module):
-    # torch.Size([1, 8, 3, 224, 224])
-    def __init__(self, n_segment, shift_div=8):
-        super(TemporalShift, self).__init__()
-        self.n_segment = n_segment
-        self.shift_div = shift_div
-
-    def forward(self, x):
-        N, T, C, H, W = x.size()
-        x = x.view(N, T, C, H * W)
-
-        # Zero padding for temporal dimension
-        zero_pad = torch.zeros((N, 1, C, H * W), device=x.device, dtype=x.dtype)
-
-        # Shift forward
-        x = torch.cat((x[:, :-1], zero_pad), 1)
-
-        # Shift backward for some channels
-        x_temp = x.clone()
-        x[:, 1:, :self.shift_div] = x_temp[:, :-1, :self.shift_div]
-
-        x = x.view(N, T, C, H, W)
-
-        return x
-
-
-class TSMFeatureExtractor(nn.Module):
+class TSMFeatureExtractor():
     def __init__(self, n_segment):
         super(TSMFeatureExtractor, self).__init__()
         self.n_segment = n_segment
-
         network = models.resnet101(weights = models.ResNet101_Weights.IMAGENET1K_V1)
-
         modules = list(network.children())[:-2]
         self.resnet101 = nn.Sequential(*modules)
         for param in self.resnet101.parameters():
             param.requires_grad = False
-        self.resnet101 = self.resnet101.to(device)  # Move the model to GPU
-        self.tsm = TemporalShift(n_segment).to(device)
+        self.resnet101 = self.resnet101.to(device)
 
-    def forward(self, x):
+    @staticmethod
+    def temporal_shift(self, x):
+        N, T, C, H, W = x.size()
+        x = x.view(N, T, C, H*W)
+        zero_pad = torch.zeros((N, 1, C, H * W), device = x.device, dtype = x.dtype)
+        x = torch.cat((x[:,:-1], zero_pad), 1)
+
+        shift_div = C // 4
+
+        out = torch.zeros_like(x)
+        out[:, :-1, :shift_div] = x[:, 1:, :shift_div]  # shift left
+        out[:, 1:, shift_div: 2 * shift_div] = x[:, :-1, shift_div: 2 * shift_div]  # shift right
+        out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:] 
+
+        out = out.view(N, T, C, H, W)
+
+        return out
+
+    def tsm_features(self, x):
         x = x.to(device)
         N, T, C, H, W = x.size()
+
         x = x.view(N * T, C, H, W)
-        original_features = self.resnet101(x)
 
-        # Reshape back to add the temporal dimension
-        original_features = original_features.view(N, T, -1, H, W)
+        shifted_features = TSMFeatureExtractor.temporal_shift(x)
+        features = self.resnet101(shifted_features)
 
-        # Step 2: Temporal Shifting
-        shifted_features = self.tsm(original_features)
+        flattened = features.view(features.size(0), -1)
+        fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
 
-        # Step 3: Combining the original and shifted features
-        combined_features = torch.cat((original_features, shifted_features), dim=2)
-
-        flattened = combined_features.view(combined_features.size(0), -1)
-
-        # Linear layer to get to the desired feature size of 2048
-        fc = torch.nn.Linear(in_features=flattened.size(1), out_features=2048)
-
-        # Reshape to (n, 2048)
         frame_features = fc(flattened)
 
         return frame_features
 
+class Processor():
+    def __init__(self, tsm_features):
+        self.tsm_extractor = tsm_features
+
     @staticmethod
-    def data_preprocessing(frame):
-        '''Preprocess the frame'''
+    def frame_processing(frame):
         preprocess = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]),
         ])
         return preprocess(frame).to(device)
 
-def total_files(video_name):
-    pattern = '*.jpg'
-    jpg_files = glob.glob(video_name + "/" + pattern)
-    return len(jpg_files)
+    def process_video(video_name, video_folder, video_frames_directories_path, output_features_path):
+        video_directory = os.path.join(video_frames_directories_path, video_name)
+        feature_path = os.path.join(output_features_path,  video_name)
+        frames = sorted(os.listdir(video_folder), key=lambda x: int(x.split("_")[1][:-4]))
+        batch_size = 1000
+        video_features = []
+        for i in tqdm(range(0, len(frames), batch_size), desc=f"TSM Feature Extraction for video: {video_name}"):
+            batch_frames = []
+            batch_names = []
+            for frame in frames[i:i+batch_size]:
+                frame_path = os.path.join(video_directory, frame)
+                image = Image.open(frame_path)
+                image = Processor.frame_processing(image)
+                batch_frames.append(image)
+                batch_names.append(frame)
 
-def save_features(output_features_path, feature_map):
-    for video_name, features in feature_map.items():
-        if features:  # Check if there are features to save
-            feature_file_path = os.path.join(output_features_path, f"{video_name}.npz")
-            np.savez(feature_file_path, *features)
-            logger.info(f"Saved features for video {video_name} at {feature_file_path}")
+            batch_frames = torch.stack(batch_frames).squeeze(dim=1)
+            batch_frames = batch_frames.unsqueeze(dim=2)
 
-def process_batch(video_name, root, frames_batch, feature_map):
-    processed_frames = []
-    try:
-        for file in frames_batch:
-            frame_path = os.path.join(root, file)
-            frame = Image.open(frame_path)
-            frame = tsm_features.data_preprocessing(frame)
-            processed_frames.append(frame)
+            batch_features = Processor.process_batch(batch_frames)
 
-        if processed_frames:
-            frame_tensor = torch.stack(processed_frames)
-            frame_tensor = frame_tensor.unsqueeze(0)
+            video_features.append(batch_features)
 
-            frame_tensor = frame_tensor.to(device)
-            extracted_features = tsm_features(frame_tensor)
+        video_features = np.vstack(video_features)
+        np.savez(f"{feature_path}.npz", video_features)
+        logger.info(f"Saved featured for video {video_name} at {feature_path}")
+        return
+
+    def process_batch(self,batch_frames):
+        batch_features = []
+        n_segment = 8
+        for i in range(0, len(batch_frames), n_segment):
+            frame = batch_frames[i:i+n_segment]
+            extracted_features = self.tsm_extractor(frame)
             if isinstance(extracted_features, torch.Tensor):
                 extracted_features_np = extracted_features.cpu().detach().numpy()
             else:
@@ -143,74 +129,11 @@ def process_batch(video_name, root, frames_batch, feature_map):
 
             extracted_features_np = extracted_features_np.flatten()
 
-        with feature_lock:
-            feature_map[video_name].append(extracted_features_np)
+            batch_features.append(extracted_features_np)
+        
+        return batch_features
 
-    except BaseException as e:
-        print("Error occurred in process_batch: ", e)
-    
-    return feature_map
-    
-
-def worker(queue, feature_map):
-    while True:
-        task = queue.get()
-        if task is None:
-            break
-        video_name, root, frames_batch = task
-        try:
-            process_batch(video_name, root, frames_batch, feature_map)
-        except BaseException as e:
-            print("An error occurred while processing:", e)
-        finally:
-            queue.task_done()
-
-def main(n_segment, video_frames_directories_path, output_features_path):
-    num_worker_threads = 1
-
-    # Create the queue and the worker threads
-    queue = Queue()
-
-    threads = []
-    feature_map = defaultdict(list)  # Changed to a dictionary to hold features for each video
-    
-    for _ in range(num_worker_threads):
-        t = Thread(target=worker, args=(queue, feature_map))
-        t.start()
-        threads.append(t)
-
-    try:
-        if os.path.getsize(output_features_path) > 0:
-            for root, dirs, files in os.walk(video_frames_directories_path):
-                video_name = os.path.basename(root)
-
-                files.sort()
-                total_frames = len(files)
-
-                # Ensure each batch has an equal number of frames
-                print(f"Extracting features from: {video_name}")
-                for i in range(0, total_frames, n_segment):
-                    if i + n_segment > total_frames:
-                        frames_batch = files[i: ]
-                    else:
-                        frames_batch = files[i:i + n_segment]
-                    if frames_batch:
-                        queue.put((video_name, root, frames_batch))
-
-        queue.join()
-                
-        save_features(output_features_path, feature_map)
-
-    except BaseException as e:
-        print("An error occurred:", e)
-
-    # Stop workers
-    for i in range(num_worker_threads):
-        queue.put(None)
-    for t in threads:
-        t.join()
-
-if __name__ == '__main__':
+def main():
     n_segment = 8
     tsm_features = TSMFeatureExtractor(n_segment).to(device)
     args = parse_arguments()
@@ -221,10 +144,23 @@ if __name__ == '__main__':
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
     os.makedirs(output_features_path, exist_ok=True)
 
-    total_frames = total_files(video_frames_directories_path)
-    batch_size = max(1200, 1)
+    num_worker_threads = 1
+    processor = Processor(tsm_features)
 
-    main(n_segment, video_frames_directories_path, output_features_path)
+    try:
+        video_folders = [folder for folder in os.listdir(video_frames_directories_path)]
 
+        with concurrent.futures.ThreadPoolExecutor(num_worker_threads) as executor:
+            list(
+                tqdm(
+                    executor.map(
+                        lambda video_features: processor.process_video(video_features, video_frames_directories_path=video_frames_directories_path, output_features_path = output_features_path), video_folders
+                    ), total=len(video_folders)
+                )
+            )
 
+    except BaseException as e:
+        print("Error occurred in execution: ", e)
 
+if __name__ == '__main__':
+    main()
