@@ -77,9 +77,8 @@ class TSMFeatureExtractor():
         return frame_features
 
 class Processor():
-    def __init__(self, tsm_features):
-        self.tsm_extractor = tsm_features
 
+    @staticmethod
     def frame_processing(frame):
         print("Processing frames ============")
         preprocess = transforms.Compose([
@@ -90,13 +89,14 @@ class Processor():
         ])
         return preprocess(frame).to(device)
 
-    def process_batch(self,batch_frames):
+    @staticmethod
+    def process_batch(batch_frames, tsm_extractor):
         print("Processing batches ==========")
         batch_features = []
         n_segment = 8
         for i in range(0, len(batch_frames), n_segment):
             frame = batch_frames[i:i+n_segment]
-            extracted_features = self.tsm_extractor(frame)
+            extracted_features = tsm_extractor(frame)
             if isinstance(extracted_features, torch.Tensor):
                 extracted_features_np = extracted_features.cpu().detach().numpy()
             else:
@@ -109,7 +109,7 @@ class Processor():
         return batch_features
 
     @staticmethod
-    def process_video(video_name, video_frames_directories_path, output_features_path):
+    def process_video(video_name, video_frames_directories_path, output_features_path, tsm_extractor):
         print("Executing processor ==========")
         video_directory = os.path.join(video_frames_directories_path, video_name)
         feature_path = os.path.join(output_features_path,  video_name)
@@ -129,7 +129,7 @@ class Processor():
             batch_frames = torch.stack(batch_frames).squeeze(dim=1)
             batch_frames = batch_frames.unsqueeze(dim=2)
 
-            batch_features = Processor.process_batch(batch_frames)
+            batch_features = Processor.process_batch(batch_frames, tsm_extractor)
 
             video_features.append(batch_features)
 
@@ -140,8 +140,8 @@ class Processor():
 
 def main():
     n_segment = 8
-    tsm_features = TSMFeatureExtractor(n_segment)
     args = parse_arguments()
+    tsm_features = TSMFeatureExtractor(n_segment)
     method = args.backbone or "tsm"
 
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/"
@@ -150,7 +150,7 @@ def main():
     os.makedirs(output_features_path, exist_ok=True)
 
     num_worker_threads = 1
-    processor = Processor(tsm_features)
+    processor = Processor()
 
     try:
         video_folders = [folder for folder in os.listdir(video_frames_directories_path)]
@@ -159,7 +159,7 @@ def main():
             list(
                 tqdm(
                     executor.map(
-                        lambda video_name: processor.process_video(video_name, video_frames_directories_path=video_frames_directories_path, output_features_path = output_features_path), video_folders
+                        lambda video_name: processor.process_video(video_name, video_frames_directories_path=video_frames_directories_path, output_features_path = output_features_path, tsm_extractor=tsm_features), video_folders
                     ), total=len(video_folders)
                 )
             )
