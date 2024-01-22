@@ -44,7 +44,6 @@ class TSMFeatureExtractor():
 
     @staticmethod
     def temporal_shift(x):
-        print("Executing TSM =============")
         N, T, C, H, W = x.size()
         x = x.view(N, T, C, H*W)
         zero_pad = torch.zeros((N, 1, C, H * W), device = x.device, dtype = x.dtype)
@@ -130,7 +129,7 @@ class Processor():
                     batch_frames.append(image)
                     batch_names.append(frame)
 
-                batch_frames = torch.stack(batch_frames).squeeze(dim=1)
+                batch_frames = torch.stack(batch_frames).squeeze(dim=0)
                 batch_frames = batch_frames.unsqueeze(dim=2)
                 print(batch_frames.size())
 
