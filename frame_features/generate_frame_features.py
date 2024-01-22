@@ -42,8 +42,8 @@ class TSMFeatureExtractor():
             param.requires_grad = False
         self.resnet101 = self.resnet101.to(device)
 
-    @staticmethod
     def temporal_shift(x):
+        print("Executing TSM =============")
         N, T, C, H, W = x.size()
         x = x.view(N, T, C, H*W)
         zero_pad = torch.zeros((N, 1, C, H * W), device = x.device, dtype = x.dtype)
@@ -108,6 +108,7 @@ class Processor():
 
     @staticmethod
     def process_video(video_name, video_frames_directories_path, output_features_path):
+        print("Executing processor ==========")
         video_directory = os.path.join(video_frames_directories_path, video_name)
         feature_path = os.path.join(output_features_path,  video_name)
         frames = sorted(os.listdir(video_directory), key=lambda x: int(x.split("_")[1][:-4]))
