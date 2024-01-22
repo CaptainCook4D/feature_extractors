@@ -43,7 +43,7 @@ class TSMFeatureExtractor():
         self.resnet101 = self.resnet101.to(device)
 
     @staticmethod
-    def temporal_shift(self, x):
+    def temporal_shift(x):
         N, T, C, H, W = x.size()
         x = x.view(N, T, C, H*W)
         zero_pad = torch.zeros((N, 1, C, H * W), device = x.device, dtype = x.dtype)
@@ -66,7 +66,7 @@ class TSMFeatureExtractor():
 
         x = x.view(N * T, C, H, W)
 
-        shifted_features = TSMFeatureExtractor.temporal_shift(x)
+        shifted_features = self.temporal_shift(x)
         features = self.resnet101(shifted_features)
 
         flattened = features.view(features.size(0), -1)
