@@ -129,8 +129,8 @@ class Processor():
                     batch_frames.append(image)
                     batch_names.append(frame)
 
-                batch_frames = torch.stack(batch_frames).squeeze(dim=0)
-                batch_frames = batch_frames.unsqueeze(dim=2)
+                batch_frames = torch.stack(batch_frames).squeeze(dim=1)
+                batch_frames = batch_frames.unsqueeze(dim=0)
                 print(batch_frames.size())
 
                 #print("batch_features")
