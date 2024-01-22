@@ -94,8 +94,12 @@ class Processor():
             batch_features = []
             n_segment = 8
             for i in range(0, len(batch_frames), n_segment):
-                frame = batch_frames[i:i+n_segment]
-                extracted_features = tsm_extractor.tsm_features(frame)
+                segment_frames = batch_frames[i:i+n_segment]
+
+                segment_frames = torch.stack(segment_frames)
+                segment_frames = segment_frames.unsqueeze(dim=0)
+                
+                extracted_features = tsm_extractor.tsm_features(segment_frames)
                 if isinstance(extracted_features, torch.Tensor):
                     extracted_features_np = extracted_features.cpu().detach().numpy()
                 else:
