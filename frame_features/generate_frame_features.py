@@ -98,7 +98,7 @@ class Processor():
 
                 segment_frames = torch.stack(segment_frames)
                 segment_frames = segment_frames.unsqueeze(dim=0)
-                
+
                 extracted_features = tsm_extractor.tsm_features(segment_frames)
                 if isinstance(extracted_features, torch.Tensor):
                     extracted_features_np = extracted_features.cpu().detach().numpy()
@@ -133,7 +133,7 @@ class Processor():
                     batch_frames.append(image)
                     batch_names.append(frame)
 
-                batch_frames = torch.stack(batch_frames)
+                #batch_frames = torch.stack(batch_frames)
                 batch_frames = batch_frames.unsqueeze(dim=0)
                 print(batch_frames.size())
 
