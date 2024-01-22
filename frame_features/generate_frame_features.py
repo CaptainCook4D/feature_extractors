@@ -91,51 +91,60 @@ class Processor():
 
     @staticmethod
     def process_batch(batch_frames, tsm_extractor):
-        print("Processing batches ==========")
-        batch_features = []
-        n_segment = 8
-        for i in range(0, len(batch_frames), n_segment):
-            frame = batch_frames[i:i+n_segment]
-            extracted_features = tsm_extractor(frame)
-            if isinstance(extracted_features, torch.Tensor):
-                extracted_features_np = extracted_features.cpu().detach().numpy()
-            else:
-                extracted_features_np = extracted_features
+        try:
+            print("Processing batches ==========")
+            batch_features = []
+            n_segment = 8
+            for i in range(0, len(batch_frames), n_segment):
+                frame = batch_frames[i:i+n_segment]
+                extracted_features = tsm_extractor(frame)
+                if isinstance(extracted_features, torch.Tensor):
+                    extracted_features_np = extracted_features.cpu().detach().numpy()
+                else:
+                    extracted_features_np = extracted_features
 
-            extracted_features_np = extracted_features_np.flatten()
+                extracted_features_np = extracted_features_np.flatten()
 
-            batch_features.append(extracted_features_np)
-        
-        return batch_features
+                batch_features.append(extracted_features_np)
+            
+            return batch_features
+
+        except BaseException as e:
+            print("Error in execution of process_batch: ",e)
 
     @staticmethod
     def process_video(video_name, video_frames_directories_path, output_features_path, tsm_extractor):
-        print("Executing processor ==========")
-        video_directory = os.path.join(video_frames_directories_path, video_name)
-        feature_path = os.path.join(output_features_path,  video_name)
-        frames = sorted(os.listdir(video_directory), key=lambda x: int(x.split("_")[1][:-4]))
-        batch_size = 1000
-        video_features = []
-        for i in tqdm(range(0, len(frames), batch_size), desc=f"TSM Feature Extraction for video: {video_name}"):
-            batch_frames = []
-            batch_names = []
-            for frame in frames[i:i+batch_size]:
-                frame_path = os.path.join(video_directory, frame)
-                image = Image.open(frame_path)
-                image = Processor.frame_processing(image)
-                batch_frames.append(image)
-                batch_names.append(frame)
+        try:
+            print("Executing processor ==========")
+            video_directory = os.path.join(video_frames_directories_path, video_name)
+            feature_path = os.path.join(output_features_path,  video_name)
+            frames = sorted(os.listdir(video_directory), key=lambda x: int(x.split("_")[1][:-4]))
+            batch_size = 1000
+            video_features = []
+            for i in tqdm(range(0, len(frames), batch_size), desc=f"TSM Feature Extraction for video: {video_name}"):
+                batch_frames = []
+                batch_names = []
+                for frame in frames[i:i+batch_size]:
+                    frame_path = os.path.join(video_directory, frame)
+                    image = Image.open(frame_path)
+                    image = Processor.frame_processing(image)
+                    batch_frames.append(image)
+                    batch_names.append(frame)
 
-            batch_frames = torch.stack(batch_frames).squeeze(dim=1)
-            batch_frames = batch_frames.unsqueeze(dim=2)
+                batch_frames = torch.stack(batch_frames).squeeze(dim=1)
+                batch_frames = batch_frames.unsqueeze(dim=2)
 
-            batch_features = Processor.process_batch(batch_frames, tsm_extractor)
+                batch_features = Processor.process_batch(batch_frames, tsm_extractor)
 
-            video_features.append(batch_features)
+                video_features.append(batch_features)
 
-        video_features = np.vstack(video_features)
-        np.savez(f"{feature_path}.npz", video_features)
-        logger.info(f"Saved featured for video {video_name} at {feature_path}")
+            video_features = np.vstack(video_features)
+            np.savez(f"{feature_path}.npz", video_features)
+            logger.info(f"Saved featured for video {video_name} at {feature_path}")
+
+        except BaseException as e:
+            print("Error in execution of process_video: ",e)
+        
         return
 
 def main():
