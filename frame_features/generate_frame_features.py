@@ -88,10 +88,27 @@ class Processor():
         ])
         return preprocess(frame).to(device)
 
-    def process_video(video_name, video_folder, video_frames_directories_path, output_features_path):
+    def process_batch(self,batch_frames):
+        batch_features = []
+        n_segment = 8
+        for i in range(0, len(batch_frames), n_segment):
+            frame = batch_frames[i:i+n_segment]
+            extracted_features = self.tsm_extractor(frame)
+            if isinstance(extracted_features, torch.Tensor):
+                extracted_features_np = extracted_features.cpu().detach().numpy()
+            else:
+                extracted_features_np = extracted_features
+
+            extracted_features_np = extracted_features_np.flatten()
+
+            batch_features.append(extracted_features_np)
+        
+        return batch_features
+
+    def process_video(video_name, video_frames_directories_path, output_features_path):
         video_directory = os.path.join(video_frames_directories_path, video_name)
         feature_path = os.path.join(output_features_path,  video_name)
-        frames = sorted(os.listdir(video_folder), key=lambda x: int(x.split("_")[1][:-4]))
+        frames = sorted(os.listdir(video_directory), key=lambda x: int(x.split("_")[1][:-4]))
         batch_size = 1000
         video_features = []
         for i in tqdm(range(0, len(frames), batch_size), desc=f"TSM Feature Extraction for video: {video_name}"):
@@ -116,23 +133,6 @@ class Processor():
         logger.info(f"Saved featured for video {video_name} at {feature_path}")
         return
 
-    def process_batch(self,batch_frames):
-        batch_features = []
-        n_segment = 8
-        for i in range(0, len(batch_frames), n_segment):
-            frame = batch_frames[i:i+n_segment]
-            extracted_features = self.tsm_extractor(frame)
-            if isinstance(extracted_features, torch.Tensor):
-                extracted_features_np = extracted_features.cpu().detach().numpy()
-            else:
-                extracted_features_np = extracted_features
-
-            extracted_features_np = extracted_features_np.flatten()
-
-            batch_features.append(extracted_features_np)
-        
-        return batch_features
-
 def main():
     n_segment = 8
     tsm_features = TSMFeatureExtractor(n_segment).to(device)
@@ -154,7 +154,7 @@ def main():
             list(
                 tqdm(
                     executor.map(
-                        lambda video_features: processor.process_video(video_features, video_frames_directories_path=video_frames_directories_path, output_features_path = output_features_path), video_folders
+                        lambda video_name: processor.process_video(video_name, video_frames_directories_path=video_frames_directories_path, output_features_path = output_features_path), video_folders
                     ), total=len(video_folders)
                 )
             )
