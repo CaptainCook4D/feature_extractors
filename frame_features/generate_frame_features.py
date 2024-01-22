@@ -90,6 +90,7 @@ class Processor():
         return preprocess(frame).to(device)
 
     def process_batch(self,batch_frames):
+        print("Processing batches ==========")
         batch_features = []
         n_segment = 8
         for i in range(0, len(batch_frames), n_segment):
