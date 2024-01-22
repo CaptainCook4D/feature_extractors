@@ -80,7 +80,6 @@ class Processor():
     def __init__(self, tsm_features):
         self.tsm_extractor = tsm_features
 
-    @staticmethod
     def frame_processing(frame):
         preprocess = transforms.Compose([
             transforms.Resize(256),
