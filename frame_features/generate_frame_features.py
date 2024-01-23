@@ -79,7 +79,7 @@ class TSMFeatureExtractor():
         features = self.resnet101(shifted_features)
         #print("\n shifted_features: ", shifted_features.shape)
 
-        flattened = features.view(features.size(1), -1)
+        flattened = features.view(features.size(0), -1)
         fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
 
         frame_features = fc(flattened)
@@ -89,7 +89,7 @@ class TSMFeatureExtractor():
 
 class Processor():
 
-    @staticmethod
+    @staticmethod 
     def frame_processing(frame):
         preprocess = transforms.Compose([
             transforms.Resize(256),
