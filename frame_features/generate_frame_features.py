@@ -66,7 +66,7 @@ class TSMFeatureExtractor():
         x = x.to(device)
         N, T, C, H, W = x.size()
 
-        x = x.view(N * T, C, H, W)
+        #x = x.view(N * T, C, H, W)
 
         shifted_features = self.temporal_shift(x)
         features = self.resnet101(shifted_features)
