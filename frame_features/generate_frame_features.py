@@ -44,11 +44,12 @@ class TSMFeatureExtractor():
 
     @staticmethod
     def temporal_shift(x):
-        NT, C, H, W = x.size()
-        x = x.view(NT, C, H, W)
-        zero_pad = torch.zeros((NT, C, H, W), device = x.device, dtype = x.dtype)
-        
-        x = torch.cat((x[:,:-1], zero_pad), 1)
+        N, T, C, H, W = x.size() 
+        x = x.view(N * T, C, H, W)
+        zero_pad = torch.zeros((N, 1, C, H, W), device=x.device, dtype=x.dtype)
+
+        # Adding a zero frame for shifting
+        x = torch.cat((x, zero_pad), 1)
 
         shift_div = C // 4
 
@@ -57,7 +58,7 @@ class TSMFeatureExtractor():
         out[:, 1:, shift_div: 2 * shift_div] = x[:, :-1, shift_div: 2 * shift_div]  # shift right
         out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:]
 
-        out = out.view(NT, C, H, W)
+        out = out.view(N, T, C, H, W)
 
         return out
 
@@ -65,14 +66,12 @@ class TSMFeatureExtractor():
         x = x.to(device)
         N, T, C, H, W = x.size()
 
-        x = x.view(N * T, C, H, W)
+        #x = x.view(N * T, C, H, W)
 
         shifted_features = self.temporal_shift(x)
-        print("\nshifted)features size: ",shifted_features.size())
-        print("\nx size: ",x.size())
         features = self.resnet101(shifted_features)
 
-        flattened = features.view(features.size(1), -1)
+        flattened = features.view(features.size(0), -1)
         fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
 
         frame_features = fc(flattened)
