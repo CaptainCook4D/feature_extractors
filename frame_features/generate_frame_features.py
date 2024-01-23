@@ -46,7 +46,7 @@ class TSMFeatureExtractor():
     def temporal_shift(x):
         NT, C, H, W = x.size()
         x = x.view(NT, C, H, W)
-        zero_pad = torch.zeros((1, NT, C, H*W), device = x.device, dtype = x.dtype)
+        zero_pad = torch.zeros((NT, 1, C, H*W), device = x.device, dtype = x.dtype)
         x = torch.cat((x[:,:-1], zero_pad), 1)
 
         shift_div = C // 4
