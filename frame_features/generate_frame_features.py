@@ -47,6 +47,9 @@ class TSMFeatureExtractor():
         N, T, C, H, W = x.size()
         x = x.view(N*T, C, H, W)
         zero_pad = torch.zeros((N, 1, C, H*W), device = x.device, dtype = x.dtype)
+        print("\nx size: ",x.size())
+        print("\nzero_pad size: ",zero_pad.size())
+        print("\n",(x.size()==zero_pad.size()))
         x = torch.cat((x[:,:-1], zero_pad), 1)
 
         shift_div = C // 4
