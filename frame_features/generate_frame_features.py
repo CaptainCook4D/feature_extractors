@@ -199,9 +199,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-
-
-# video_folder
- ## frames
-
