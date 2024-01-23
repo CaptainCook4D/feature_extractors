@@ -74,7 +74,10 @@ class TSMFeatureExtractor():
         #x = x.view(N * T, C, H, W)
 
         shifted_features = self.temporal_shift(x)
+        shifted_features = shifted_features.view(N*T, C, H, W)
+        
         features = self.resnet101(shifted_features)
+        print("\n shifted_features: ", shifted_features.shape)
 
         flattened = features.view(features.size(0), -1)
         fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
