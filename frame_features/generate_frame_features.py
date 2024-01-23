@@ -119,6 +119,8 @@ class Processor():
 
                 extracted_features_np = extracted_features_np.flatten()
 
+                print("\nExtracted features: ", extracted_features_np)
+
                 batch_features.append(extracted_features_np)
             
             return batch_features
