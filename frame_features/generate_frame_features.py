@@ -44,7 +44,7 @@ class TSMFeatureExtractor():
 
     @staticmethod
     def temporal_shift(x):
-        print("\ntemporal_shift input size: ",x.shape)
+        #print("\ntemporal_shift input size: ",x.shape)
         N, T, C, H, W = x.size() 
         x_new = x.view(N * T, C, H, W)
         zero_pad = torch.zeros((N, 1, C, H, W), device=x.device, dtype=x.dtype)
@@ -60,14 +60,14 @@ class TSMFeatureExtractor():
         out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:]
 
         out = out[:, 1:, :, :, :]
-        print("\n out shape: ",out.shape)
+        #print("\n out shape: ",out.shape)
 
         out = out.view(N, T, C, H, W)
 
         return out
 
     def tsm_features(self, x):
-        print("\ntemporal_features input: ",x.shape)
+        #print("\ntemporal_features input: ",x.shape)
         x = x.to(device)
         N, T, C, H, W = x.size()
 
@@ -75,14 +75,15 @@ class TSMFeatureExtractor():
 
         shifted_features = self.temporal_shift(x)
         shifted_features = shifted_features.view(N*T, C, H, W)
-        
+
         features = self.resnet101(shifted_features)
-        print("\n shifted_features: ", shifted_features.shape)
+        #print("\n shifted_features: ", shifted_features.shape)
 
         flattened = features.view(features.size(0), -1)
         fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
 
         frame_features = fc(flattened)
+        print("flattened features: ",frame_features.shape)
 
         return frame_features
 
@@ -108,7 +109,7 @@ class Processor():
 
                 segment_frames = torch.stack(segment_frames)
                 segment_frames = segment_frames.unsqueeze(dim=0)
-                print(segment_frames.size())
+                #print(segment_frames.size())
 
                 extracted_features = tsm_extractor.tsm_features(segment_frames)
                 if isinstance(extracted_features, torch.Tensor):
@@ -188,6 +189,7 @@ def main():
                     ), total=len(video_folders)
                 )
             )
+            print("\n")
 
     except BaseException as e:
         print("Error occurred in execution: ", e)
