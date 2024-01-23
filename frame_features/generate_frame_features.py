@@ -72,7 +72,7 @@ class TSMFeatureExtractor():
         print("\nx size: ",x.size())
         features = self.resnet101(shifted_features)
 
-        flattened = features.view(features.size(0), -1)
+        flattened = features.view(features.size(1), -1)
         fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
 
         frame_features = fc(flattened)
