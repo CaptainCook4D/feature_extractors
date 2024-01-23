@@ -44,6 +44,7 @@ class TSMFeatureExtractor():
 
     @staticmethod
     def temporal_shift(x):
+        print("\ntemporal_shift input size: ",x.shape())
         N, T, C, H, W = x.size() 
         x_new = x.view(N * T, C, H, W)
         zero_pad = torch.zeros((N, 1, C, H, W), device=x.device, dtype=x.dtype)
@@ -58,11 +59,14 @@ class TSMFeatureExtractor():
         out[:, 1:, shift_div: 2 * shift_div] = x[:, :-1, shift_div: 2 * shift_div]  # shift right
         out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:]
 
+        print("\n out shape: ",out.shape())
+
         out = out.view(N, T, C, H, W)
 
         return out
 
     def tsm_features(self, x):
+        print("\ntemporal_features input: ",x.shape())
         x = x.to(device)
         N, T, C, H, W = x.size()
 
