@@ -58,7 +58,7 @@ class TSMFeatureExtractor():
         out[:, 1:, shift_div: 2 * shift_div] = x[:, :-1, shift_div: 2 * shift_div]  # shift right
         out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:]
 
-        out = out.view(N*T, C, H, W)
+        out = out.view(N, T, C, H, W)
 
         return out
 
