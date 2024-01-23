@@ -57,7 +57,7 @@ class TSMFeatureExtractor():
         out = torch.zeros_like(x)
         out[:, :-1, :shift_div] = x[:, 1:, :shift_div]  # shift left
         out[:, 1:, shift_div: 2 * shift_div] = x[:, :-1, shift_div: 2 * shift_div]  # shift right
-        out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:]
+        out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:] # no shift
 
         out = out[:, 1:, :, :, :]
         #print("\n out shape: ",out.shape)
@@ -79,11 +79,11 @@ class TSMFeatureExtractor():
         features = self.resnet101(shifted_features)
         #print("\n shifted_features: ", shifted_features.shape)
 
-        flattened = features.view(features.size(0), -1)
+        flattened = features.view(features.size(1), -1)
         fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
 
         frame_features = fc(flattened)
-        print("flattened features: ",frame_features.shape)
+        print("flattened features: ",frame_features.shape) # [8,2048]
 
         return frame_features
 
@@ -119,7 +119,7 @@ class Processor():
 
                 extracted_features_np = extracted_features_np.flatten()
 
-                print("\nExtracted features: ", extracted_features_np.shape)
+                print("\nExtracted features: ", extracted_features_np.shape) #[8*2048, ]
 
                 batch_features.append(extracted_features_np)
             
@@ -198,3 +198,10 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
+# video_folder
+ ## frames
+
