@@ -153,6 +153,7 @@ class Processor():
 
                 #print("batch_features")
                 batch_features = Processor.process_batch(batch_frames, tsm_extractor)
+                print("\nbatch_features size: ", len(batch_features), batch_features[0].shape)
 
                 video_features.append(batch_features)
 
