@@ -153,7 +153,12 @@ class Processor():
 
                 #print("batch_features")
                 batch_features = Processor.process_batch(batch_frames, tsm_extractor)
-                print("\nbatch_features size: ", len(batch_features), batch_features[0].shape)
+                if len(batch_features) < 125:
+                    padding_length = 125 - len(batch_features)
+                    zero_padding = [0] * 16384
+                    batch_features.extend([zero_padding] * padding_length)
+                    
+                print("\nbatch_features size: ", len(batch_features), batch_features[1].shape)
 
                 video_features.append(batch_features)
 
