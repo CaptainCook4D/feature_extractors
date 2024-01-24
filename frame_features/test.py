@@ -7,4 +7,4 @@ npz_file = np.load('/data/rohith/captain_cook/features/gopro/frames/omnivore/10_
 print("Contents of the NPZ file:")
 for file in npz_file.files:
     print(file)
-    print(npz_file[file])
+    print(npz_file[file].size())
