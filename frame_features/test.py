@@ -6,5 +6,5 @@ npz_file = np.load('/data/rohith/captain_cook/features/gopro/frames/omnivore/10_
 # List all files/arrays in the npz file
 print("Contents of the NPZ file:")
 for file in npz_file.files:
-    print(len(file))
-    print(npz_file[file])
+    print(file)
+    print(npz_file[file].size)
