@@ -157,8 +157,8 @@ class Processor():
                     padding_length = 125 - len(batch_features)
                     zero_padding = [0] * 16384
                     batch_features.extend([zero_padding] * padding_length)
-                    
-                print("\nbatch_features size: ", len(batch_features), batch_features[1].shape)
+
+                print("\nbatch_features size: ", len(batch_features), batch_features[0].shape)
 
                 video_features.append(batch_features)
 
