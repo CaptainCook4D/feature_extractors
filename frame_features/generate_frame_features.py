@@ -145,10 +145,6 @@ class Processor():
                     batch_names.append(frame)
 
                 batch_features = Processor.process_batch(batch_frames, tsm_extractor)
-                if len(batch_features) < 125:
-                    padding_length = 125 - len(batch_features)
-                    zero_padding = [0] * 16384
-                    batch_features.extend([zero_padding] * padding_length)
 
                 print("\nbatch_features size: ", len(batch_features), batch_features[0].shape)
 
