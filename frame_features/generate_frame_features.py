@@ -44,7 +44,6 @@ class TSMFeatureExtractor():
 
     @staticmethod
     def temporal_shift(x):
-        #print("\ntemporal_shift input size: ",x.shape)
         N, T, C, H, W = x.size() 
         x_new = x.view(N * T, C, H, W)
         zero_pad = torch.zeros((N, 1, C, H, W), device=x.device, dtype=x.dtype)
@@ -60,35 +59,28 @@ class TSMFeatureExtractor():
         out[:, :, 2 * shift_div:] = x[:, :, 2 * shift_div:] # no shift
 
         out = out[:, 1:, :, :, :]
-        #print("\n out shape: ",out.shape)
 
         out = out.view(N, T, C, H, W)
 
         return out
 
     def tsm_features(self, x):
-        #print("\ntemporal_features input: ",x.shape)
         x = x.to(device)
         N, T, C, H, W = x.size()
-
-        #x = x.view(N * T, C, H, W)
 
         shifted_features = self.temporal_shift(x)
         shifted_features = shifted_features.view(N*T, C, H, W)
 
         features = self.resnet101(shifted_features)
-        #print("\n shifted_features: ", shifted_features.shape)
 
         flattened = features.view(features.size(0), -1)
         fc = torch.nn.Linear(in_features = flattened.size(1), out_features=2048)
 
         frame_features = fc(flattened)
-        #print("flattened features: ",frame_features.shape) # [8,2048]
 
         return frame_features
 
 class Processor():
-
     @staticmethod 
     def frame_processing(frame):
         preprocess = transforms.Compose([
@@ -101,6 +93,12 @@ class Processor():
 
     @staticmethod
     def process_batch(batch_frames, tsm_extractor):
+        '''
+            i/p: batch of 1000 frames, tsm_extractor object
+        
+            o/p: tsm_extractor output is an array of shape [8, 2048]
+            final o/p size is [16384, ]
+        '''
         try:
             batch_features = []
             n_segment = 8
@@ -109,17 +107,12 @@ class Processor():
 
                 segment_frames = torch.stack(segment_frames)
                 segment_frames = segment_frames.unsqueeze(dim=0)
-                #print(segment_frames.size())
 
                 extracted_features = tsm_extractor.tsm_features(segment_frames)
                 if isinstance(extracted_features, torch.Tensor):
                     extracted_features_np = extracted_features.cpu().detach().numpy()
                 else:
                     extracted_features_np = extracted_features
-
-                extracted_features_np = extracted_features_np.flatten()
-
-                #print("\nExtracted features: ", extracted_features_np.shape) #[8*2048, ]
 
                 batch_features.append(extracted_features_np)
             
@@ -130,6 +123,11 @@ class Processor():
 
     @staticmethod
     def process_video(video_name, video_frames_directories_path, output_features_path, tsm_extractor):
+        '''
+            i/p: video name, directory of videos, output path, tsm feature extractor method
+
+            o/p: .npz file containing frame wise features of each video in batches of 1000
+        '''
         try:
             video_directory = os.path.join(video_frames_directories_path, video_name)
             feature_path = os.path.join(output_features_path,  video_name)
@@ -142,16 +140,10 @@ class Processor():
                 for frame in frames[i:i+batch_size]:
                     frame_path = os.path.join(video_directory, frame)
                     image = Image.open(frame_path)
-                    #print("image")
                     image = Processor.frame_processing(image)
                     batch_frames.append(image)
                     batch_names.append(frame)
 
-                #batch_frames = torch.stack(batch_frames)
-                #batch_frames = batch_frames.unsqueeze(dim=0)
-                #print(batch_frames.size())
-
-                #print("batch_features")
                 batch_features = Processor.process_batch(batch_frames, tsm_extractor)
                 if len(batch_features) < 125:
                     padding_length = 125 - len(batch_features)
@@ -160,7 +152,7 @@ class Processor():
 
                 print("\nbatch_features size: ", len(batch_features), batch_features[0].shape)
 
-                video_features.append(batch_features)
+                video_features.extend(batch_features)
 
             video_features = np.vstack(video_features)
             np.savez(f"{feature_path}.npz", video_features)
