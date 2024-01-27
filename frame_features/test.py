@@ -1,11 +1,12 @@
 import numpy as np
 
 # Load the .npz file
-npz_file = np.load('/data/rohith/captain_cook/features/gopro/frames/omnivore/10_16_360p.npz')
+npz_file = np.load('/data/rohith/captain_cook/features/gopro/frames/tsm/10_24_360p.npz')
 
 
 # List all files/arrays in the npz file
 print("Contents of the NPZ file:")
 for file in npz_file.files:
     print(file)
+    print(npz_file[file])
     print(npz_file[file].shape)
