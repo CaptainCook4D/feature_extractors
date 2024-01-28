@@ -168,7 +168,7 @@ def main():
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
 
-    completed_videos = [folder.split(".") for folder in os.listdir(output_features_path)]
+    completed_videos = [folder.split(".")[0] for folder in os.listdir(output_features_path)]
 
     num_worker_threads = 1
     processor = Processor()
