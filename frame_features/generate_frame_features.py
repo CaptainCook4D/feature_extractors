@@ -145,7 +145,7 @@ class Processor():
                     batch_names.append(frame)
 
                 batch_features = Processor.process_batch(batch_frames, tsm_extractor)
-                
+
                 video_features.extend(batch_features)
 
             video_features = np.vstack(video_features)
@@ -167,13 +167,14 @@ def main():
     video_frames_directories_path = "/data/rohith/captain_cook/frames/gopro/resolution_360p/"
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
-    os.makedirs(output_features_path, exist_ok=True)
+
+    completed_videos = [folder.split(".") for folder in os.listdir(output_features_path)]
 
     num_worker_threads = 1
     processor = Processor()
 
     try:
-        video_folders = [folder for folder in os.listdir(video_frames_directories_path)]
+        video_folders = [folder for folder in os.listdir(video_frames_directories_path) if folder not in completed_videos]
 
         with concurrent.futures.ThreadPoolExecutor(num_worker_threads) as executor:
             list(
