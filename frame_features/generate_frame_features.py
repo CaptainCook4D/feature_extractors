@@ -176,6 +176,8 @@ def main():
     try:
         video_folders = [folder for folder in os.listdir(video_frames_directories_path) if folder not in completed_videos]
 
+        print(video_folders)
+
         with concurrent.futures.ThreadPoolExecutor(num_worker_threads) as executor:
             list(
                 tqdm(
