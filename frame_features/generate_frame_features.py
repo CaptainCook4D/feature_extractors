@@ -24,7 +24,7 @@ logging.basicConfig(filename=log_file_path, filemode='a', level=logging.INFO,
 logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device == "cuda":
-    torch.cuda.set_per_process_memory_fraction(0.5)
+    torch.cuda.set_per_process_memory_fraction(1)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
