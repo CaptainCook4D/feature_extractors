@@ -12,6 +12,7 @@ from PIL import Image
 import glob2 as glob
 import concurrent.futures
 from tqdm import tqdm
+import sys
 
 log_directory = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_directory):
@@ -24,7 +25,7 @@ logging.basicConfig(filename=log_file_path, filemode='a', level=logging.INFO,
 logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device == "cuda":
-    torch.cuda.set_per_process_memory_fraction(1)
+    torch.cuda.set_per_process_memory_fraction(0.25)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
@@ -168,13 +169,14 @@ def main():
 
     output_features_path = f"/data/rohith/captain_cook/features/gopro/frames/{method}/"
 
-    completed_videos = [folder.split(".")[0] for folder in os.listdir(output_features_path)]
+    #completed_videos = [folder.split(".")[0] for folder in os.listdir(output_features_path)]
 
     num_worker_threads = 1
     processor = Processor()
 
     try:
-        video_folders = [folder for folder in os.listdir(video_frames_directories_path) if folder not in completed_videos]
+        batch = sys.argv[1]
+        video_folders = batch.split(',')
 
         #print(completed_videos)
         #print(video_folders)
