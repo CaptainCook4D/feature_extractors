@@ -20,4 +20,5 @@ program = "frame_features/generate_frame_features.py"
 
 for batch in batches:
     batch = ','.join(batch)
-    subprocess.Popen(['x-terminal-emulator', '-e', f'python3 {program} "{batch}" &'])
+    command = f'osascript -e \'tell application "Terminal" to do script "python3 {program} \\"{batch}\\" &"\''
+    subprocess.Popen(command, shell=True)
