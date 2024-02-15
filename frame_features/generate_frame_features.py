@@ -30,6 +30,7 @@ if device == "cuda":
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
     parser.add_argument("--backbone", type=str, default="tsm", help="Specify the method to be used.")
+    parser.add_argument("--batch", type="str", default=None, help="Specify the batch of videos to extract features from")
     return parser.parse_args()
 
 class TSMFeatureExtractor():
@@ -175,8 +176,8 @@ def main():
     processor = Processor()
 
     try:
-        batch = sys.argv[1]
-        video_folders = batch.split(',')
+        batch_videos = args.batch
+        video_folders = batch_videos.split(',')
 
         #print(completed_videos)
         #print(video_folders)

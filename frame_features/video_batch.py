@@ -20,4 +20,5 @@ program = "frame_features/generate_frame_features.py"
 
 for batch in batches:
     batch = ','.join(batch)
-    subprocess.run(['python3', program, batch], check=True)
+    command = ["python3", program, "--batch", batch]
+    subprocess.run(command, check=True)
