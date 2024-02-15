@@ -30,7 +30,7 @@ if device == "cuda":
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Script for processing methods.")
     parser.add_argument("--backbone", type=str, default="tsm", help="Specify the method to be used.")
-    parser.add_argument("--batch", type="str", default=None, help="Specify the batch of videos to extract features from")
+    parser.add_argument("--batch", type=str, default=None, help="Specify the batch of videos to extract features from")
     return parser.parse_args()
 
 class TSMFeatureExtractor():
