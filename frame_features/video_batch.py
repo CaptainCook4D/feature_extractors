@@ -20,5 +20,4 @@ program = "frame_features/generate_frame_features.py"
 
 for batch in batches:
     batch = ','.join(batch)
-    command = f'osascript -e \'tell application "Terminal" to do script "python3 {program} \\"{batch}\\" &"\''
-    subprocess.Popen(command, shell=True)
+    subprocess.run(['python3', program, batch], check=True)
