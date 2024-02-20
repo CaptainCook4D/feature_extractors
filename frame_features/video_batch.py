@@ -9,10 +9,10 @@ completed_videos = [folder.split(".")[0] for folder in os.listdir(output_feature
 
 video_folders = [folder for folder in os.listdir(video_frames_directories_path) if folder not in completed_videos]
 
-batch_1 = video_folders[:30]
-batch_2 = video_folders[30:60]
-batch_3 = video_folders[60:90]
-batch_4 = video_folders[90:]
+batch_1 = video_folders[:9]
+batch_2 = video_folders[9:18]
+batch_3 = video_folders[18:27]
+batch_4 = video_folders[27:]
 
 batches = [batch_1, batch_2, batch_3, batch_4]
 
