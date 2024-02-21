@@ -9,11 +9,10 @@ completed_videos = [folder.split(".")[0] for folder in os.listdir(output_feature
 
 video_folders = [folder for folder in os.listdir(video_frames_directories_path) if folder not in completed_videos]
 
-batch_1 = video_folders[:8]
-batch_2 = video_folders[8:16]
-batch_3 = video_folders[16:]
+batch_1 = video_folders[:5]
+batch_2 = video_folders[5:]
 
-batches = [batch_1, batch_2, batch_3]
+batches = [batch_1, batch_2]
 
 program = "frame_features/generate_frame_features.py"
 
