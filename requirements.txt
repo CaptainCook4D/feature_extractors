@@ -5,7 +5,7 @@ numpy
 matplotlib
 transformers
 natsort
-pytorchvideo
+pytorchvideo @ git+https://github.com/facebookresearch/pytorchvideo.git@28fe037d212663c6a24f373b94cc5d478c8c1a1d
 einops
 timm
 pytorchvideo
@@ -15,3 +15,15 @@ torchvision
 Pillow
 scikit-learn
 glob2
+ftfy
+regex
+einops
+fvcore
+eva-decord==0.6.1
+iopath
+numpy>=1.19
+matplotlib
+types-regex
+mayavi
+cartopy
+moviepy
