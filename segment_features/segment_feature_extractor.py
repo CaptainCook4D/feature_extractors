@@ -40,9 +40,14 @@ class VideoProcessor:
 
     def process_video(self, video_name, video_directory_path, output_features_path):
         segment_size = self.fps / self.num_frames_per_feature
-        video_path = os.path.join(video_directory_path, f"{video_name}.mp4")
+        video_path = os.path.join(video_directory_path, f"{video_name}.mp4" if "mp4" not in video_name else video_name)
 
         output_file_path = os.path.join(output_features_path, video_name)
+
+        if os.path.exists(f"{output_file_path}_{int(segment_size)}s_{int(1)}s.npz"):
+            logger.info(f"Skipping video: {video_name}")
+            return
+
         os.makedirs(output_features_path, exist_ok=True)
 
         video = EncodedVideo.from_path(video_path)
@@ -57,6 +62,9 @@ class VideoProcessor:
                                desc=f"Processing video segments for video {video_name}"):
             end_time = start_time + segment_size
             end_time = min(end_time, video_duration)
+
+            if end_time - start_time < 0.04:
+                continue
 
             video_data = video.get_clip(start_sec=start_time, end_sec=end_time)
             segment_video_inputs = video_data["video"]
@@ -246,8 +254,8 @@ def main_hololens(is_sequential=False):
 
 # Main
 def main():
-    video_files_path = "/data/error_detection/dataset/videos/recordings"
-    output_features_path = f"/data/error_detection/dataset/features/{method}"
+    video_files_path = "/data/rohith/captain_cook/data/gopro/resolution_360p"
+    output_features_path = f"/data/rohith/captain_cook/features/gopro/segments/{method}/"
 
     video_transform = get_video_transformation(method)
     feature_extractor = get_feature_extractor(method)
@@ -283,4 +291,5 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    main_hololens(is_sequential=False)
+    # main_hololens(is_sequential=False)
+    main()
