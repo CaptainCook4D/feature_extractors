@@ -4,7 +4,7 @@ import torch
 from lib.imagebind.imagebind.models import imagebind_model
 from lib.imagebind.imagebind.models.imagebind_model import ModalityType
 
-audio_paths = [".assets/dog_audio.wav", ".assets/car_audio.wav", ".assets/bird_audio.wav"]
+audio_paths = ["/data/rohith/captain_cook/audios/resolution_360p/1_7.wav"]
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -17,19 +17,14 @@ model.to(device)
 inputs = {
     ModalityType.AUDIO: data.load_and_transform_audio_data(audio_paths, device),
 }
-
+embeddings = None
 with torch.no_grad():
     embeddings = model(inputs)
+print("Processed audio embeddings")
+
 
 print(
-    "Vision x Text: ",
-    torch.softmax(embeddings[ModalityType.VISION] @ embeddings[ModalityType.TEXT].T, dim=-1),
+    "Audio : ",
+    torch.softmax(embeddings[ModalityType.AUDIO], dim=-1),
 )
-print(
-    "Audio x Text: ",
-    torch.softmax(embeddings[ModalityType.AUDIO] @ embeddings[ModalityType.TEXT].T, dim=-1),
-)
-print(
-    "Vision x Audio: ",
-    torch.softmax(embeddings[ModalityType.VISION] @ embeddings[ModalityType.AUDIO].T, dim=-1),
-)
+
