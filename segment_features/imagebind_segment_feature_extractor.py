@@ -5,20 +5,17 @@ We use these video segments to extract video embeddings using the imagebind mode
 """
 import argparse
 import os
-
 import torch
-import torchaudio
-from pytorchvideo.data.encoded_video import EncodedVideo
-from pytorchvideo.transforms import ShortSideScale, UniformTemporalSubsample
-from torchvision.transforms import Compose, Lambda
 from tqdm import tqdm
-from torchvision import transforms
-from pytorchvideo import transforms as pv_transforms
+
+from lib.imagebind.imagebind.models import imagebind_model
+from lib.imagebind.imagebind.models.imagebind_model import ModalityType
 
 from lib.imagebind.imagebind.data import SpatialCrop
-from lib.imagebind.imagebind.models import imagebind_model
+from pytorchvideo import transforms as pv_transforms
+from pytorchvideo.data.encoded_video import EncodedVideo
+from torchvision import transforms
 from torchvision.transforms._transforms_video import NormalizeVideo
-from lib.imagebind.imagebind.models.imagebind_model import ModalityType
 
 # Load the model from checkpoint into the device
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -33,14 +30,15 @@ def load_and_transform_video_data(
         sample_rate=16000,
 ):
     # Define transformations for the video
-    video_transform = Compose([
-        UniformTemporalSubsample(16),  # Subsample to 16 frames uniformly over the clip duration
-        Lambda(lambda x: x / 255.0),  # Normalize pixel values to [0, 1]
-        NormalizeVideo(
-            mean=(0.48145466, 0.4578275, 0.40821073),
-            std=(0.26862954, 0.26130258, 0.27577711)
-        )
-    ])
+    video_transform = transforms.Compose(
+        [
+            pv_transforms.ShortSideScale(224),
+            NormalizeVideo(
+                mean=(0.48145466, 0.4578275, 0.40821073),
+                std=(0.26862954, 0.26130258, 0.27577711),
+            ),
+        ]
+    )
     frame_sampler = pv_transforms.UniformTemporalSubsample(num_samples=10)
     video = EncodedVideo.from_path(
         video_path,
@@ -58,8 +56,10 @@ def load_and_transform_video_data(
         if clip is None:
             raise ValueError("No clip found")
         # Apply transformations to the video clip
-        transformed_clip = [video_transform(clip['video'])]
-        transformed_clip = SpatialCrop(224, num_crops=3)(transformed_clip)
+        video_clip = frame_sampler(clip['video'])
+        video_clip = video_clip / 255.0  # since this is float, need 0-1
+        transformed_clip = [video_transform(video_clip)]
+        transformed_clip = SpatialCrop(224, num_crops=1)(transformed_clip)
         video_clip = torch.stack(transformed_clip, dim=0)
         video_outputs.append(video_clip)
     transformed_video = torch.stack(video_outputs, dim=0).to(device)
@@ -76,14 +76,15 @@ def fetch_video_embeddings(video_path):
     with torch.no_grad():
         for i in tqdm(range(0, len(transformed_video), 1), desc="Processing video chunks"):
             chunk = transformed_video[i:i + 1]  # Get the current chunk
-            inputs = {ModalityType.VISION: chunk}
+            inputs = {
+                ModalityType.VISION: chunk
+            }
             embeddings = model(inputs)
             output_embeddings.append(embeddings[ModalityType.VISION])
 
     # Stack all the collected embeddings into a single tensor
     stacked_embeddings = torch.cat(output_embeddings, dim=0)
     print(f"Processed audio embeddings for {video_path}")
-
     return stacked_embeddings
 
 
@@ -110,7 +111,7 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--segment_length", type=int, required=True)
+    parser.add_argument("--segment_length", type=float, required=True)
 
     segment_length = parser.parse_args().segment_length
     main()
