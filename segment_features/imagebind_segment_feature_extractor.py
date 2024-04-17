@@ -5,6 +5,8 @@ We use these video segments to extract video embeddings using the imagebind mode
 """
 import argparse
 import os
+
+import numpy as np
 import torch
 from tqdm import tqdm
 
@@ -39,7 +41,7 @@ def load_and_transform_video_data(
             ),
         ]
     )
-    frame_sampler = pv_transforms.UniformTemporalSubsample(num_samples=10)
+    frame_sampler = pv_transforms.UniformTemporalSubsample(num_samples=int(segment_length))
     video = EncodedVideo.from_path(
         video_path,
         decoder="decord",
@@ -59,7 +61,7 @@ def load_and_transform_video_data(
         video_clip = frame_sampler(clip['video'])
         video_clip = video_clip / 255.0  # since this is float, need 0-1
         transformed_clip = [video_transform(video_clip)]
-        transformed_clip = SpatialCrop(224, num_crops=1)(transformed_clip)
+        transformed_clip = SpatialCrop(224, num_crops=3)(transformed_clip)
         video_clip = torch.stack(transformed_clip, dim=0)
         video_outputs.append(video_clip)
     transformed_video = torch.stack(video_outputs, dim=0).to(device)
@@ -74,8 +76,8 @@ def fetch_video_embeddings(video_path):
 
     # Process the video data in chunks of 100 using tqdm for progress visualization
     with torch.no_grad():
-        for i in tqdm(range(0, len(transformed_video), 1), desc="Processing video chunks"):
-            chunk = transformed_video[i:i + 1]  # Get the current chunk
+        for i in tqdm(range(0, len(transformed_video), 100), desc="Processing video chunks"):
+            chunk = transformed_video[i:i + 100]  # Get the current chunk
             inputs = {
                 ModalityType.VISION: chunk
             }
@@ -84,13 +86,13 @@ def fetch_video_embeddings(video_path):
 
     # Stack all the collected embeddings into a single tensor
     stacked_embeddings = torch.cat(output_embeddings, dim=0)
-    print(f"Processed audio embeddings for {video_path}")
+    print(f"Processed video embeddings for {video_path}")
     return stacked_embeddings
 
 
 def main():
     video_directory_path = "/data/rohith/captain_cook/videos/resolution_360p/"
-    video_feature_directory_path = f"/data/rohith/captain_cook/features/gopro/segments/imagebind_{segment_length}/"
+    video_feature_directory_path = f"/data/rohith/captain_cook/features/gopro/segments/imagebind_{int(segment_length)}/"
     os.makedirs(video_feature_directory_path, exist_ok=True)
     video_files = os.listdir(video_directory_path)
 
@@ -105,8 +107,9 @@ def main():
 
         # Fetch audio embeddings
         video_embeddings = fetch_video_embeddings(video_path)
+        numpy_video_embeddings = video_embeddings.cpu().numpy()
         # Store embeddings in a npz file
-        torch.save(video_embeddings, npz_file_path)
+        np.savez(npz_file_path, video_embeddings=numpy_video_embeddings)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ Store the audio embeddings into a npz file.
 
 import os
 
+import numpy as np
 import torch
 import torchaudio
 from tqdm import tqdm
@@ -93,8 +94,9 @@ def main():
 
         # Fetch audio embeddings
         audio_embeddings = fetch_audio_embeddings(audio_path)
+        numpy_video_embeddings = audio_embeddings.cpu().numpy()
         # Store embeddings in a npz file
-        torch.save(audio_embeddings, npz_file_path)
+        np.savez(npz_file_path, video_embeddings=numpy_video_embeddings)
 
 
 if __name__ == "__main__":
