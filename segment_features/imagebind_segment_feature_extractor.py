@@ -9,6 +9,8 @@ import os
 import torch
 import torchaudio
 from pytorchvideo.data.encoded_video import EncodedVideo
+from pytorchvideo.transforms import ShortSideScale, UniformTemporalSubsample
+from torchvision.transforms import Compose, Lambda
 from tqdm import tqdm
 from torchvision import transforms
 from pytorchvideo import transforms as pv_transforms
@@ -30,16 +32,16 @@ def load_and_transform_video_data(
         clip_duration=2,
         sample_rate=16000,
 ):
-    video_transform = transforms.Compose(
-        [
-            pv_transforms.ShortSideScale(224),
-            NormalizeVideo(
-                mean=(0.48145466, 0.4578275, 0.40821073),
-                std=(0.26862954, 0.26130258, 0.27577711),
-            ),
-        ]
-    )
-    frame_sampler = pv_transforms.UniformTemporalSubsample(num_samples=clip_duration)
+    # Define transformations for the video
+    video_transform = Compose([
+        UniformTemporalSubsample(16),  # Subsample to 16 frames uniformly over the clip duration
+        Lambda(lambda x: x / 255.0),  # Normalize pixel values to [0, 1]
+        NormalizeVideo(
+            mean=(0.48145466, 0.4578275, 0.40821073),
+            std=(0.26862954, 0.26130258, 0.27577711)
+        )
+    ])
+    frame_sampler = pv_transforms.UniformTemporalSubsample(num_samples=10)
     video = EncodedVideo.from_path(
         video_path,
         decoder="decord",
@@ -55,27 +57,34 @@ def load_and_transform_video_data(
         clip = video.get_clip(start_sample, end_sample)
         if clip is None:
             raise ValueError("No clip found")
-        video_clip = frame_sampler(clip["video"])
-        video_clip = video_clip / 255.0  # since this is float, need 0-1
-
-        video_clip = [video_transform(video_clip)]
-        video_clip = SpatialCrop(224, num_crops=3)(video_clip)
-        video_clip = torch.stack(video_clip, dim=0)
+        # Apply transformations to the video clip
+        transformed_clip = [video_transform(clip['video'])]
+        transformed_clip = SpatialCrop(224, num_crops=3)(transformed_clip)
+        video_clip = torch.stack(transformed_clip, dim=0)
         video_outputs.append(video_clip)
-    transformed_video = torch.stack(video_outputs, dim=0)
+    transformed_video = torch.stack(video_outputs, dim=0).to(device)
     return transformed_video
 
 
 def fetch_video_embeddings(video_path):
-    # Load and transform the data
-    inputs = {
-        ModalityType.VISION: load_and_transform_video_data(video_path),
-    }
+    transformed_video = load_and_transform_video_data(video_path)
+
+    # Initialize a list to hold the outputs
+    output_embeddings = []
+
+    # Process the video data in chunks of 100 using tqdm for progress visualization
     with torch.no_grad():
-        embeddings = model(inputs)
+        for i in tqdm(range(0, len(transformed_video), 1), desc="Processing video chunks"):
+            chunk = transformed_video[i:i + 1]  # Get the current chunk
+            inputs = {ModalityType.VISION: chunk}
+            embeddings = model(inputs)
+            output_embeddings.append(embeddings[ModalityType.VISION])
+
+    # Stack all the collected embeddings into a single tensor
+    stacked_embeddings = torch.cat(output_embeddings, dim=0)
     print(f"Processed audio embeddings for {video_path}")
 
-    return embeddings[ModalityType.VISION]
+    return stacked_embeddings
 
 
 def main():
