@@ -29,6 +29,47 @@ def load_video_embeddings(video_feature_path):
     return video_numpy_data
 
 
+def test_npz():
+    import numpy as np
+
+    # Load the .npz file
+    npz_file = np.load('/data/rohith/captain_cook/features/gopro/frames/tsm/1_7_360p.npz')
+
+    # List all files/arrays in the npz file
+    print("Contents of the NPZ file:")
+    for file in npz_file.files:
+        print(file)
+        print(npz_file[file])
+        print(npz_file[file].shape)
+
+
+def test_pkl():
+    import os
+    import pickle as pkl
+
+    def is_pickle_empty(pickle_file_path):
+        """Check if a pickle file is empty or not."""
+        # Check if the file exists and is not empty
+        if os.path.exists(pickle_file_path) and os.path.getsize(pickle_file_path) > 0:
+            return False  # File exists and has content
+        else:
+            return True  # File does not exist or is empty
+
+    # Replace with the path to your pickle file
+    pickle_file_path = '/data/bhavya/splits/ce_wts.pkl'
+
+    # Check if the pickle is empty
+    empty = is_pickle_empty(pickle_file_path)
+    print(f"The pickle file is {'empty' if empty else 'not empty'}.")
+
+
+    # Load the pickle file
+    with open(pickle_file_path, 'rb') as file:
+        data = pkl.load(file)
+        print(data)
+
+
+
 def main():
     recording_id = "10_16"
     # check_file_match(recording_id)
@@ -38,4 +79,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    test_pkl()
