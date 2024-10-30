@@ -1,4 +1,5 @@
 import argparse
+import math
 import os
 
 import numpy as np
@@ -13,9 +14,9 @@ from lib.imagebind.imagebind.models import imagebind_model
 
 # Load the model from checkpoint into the device
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-model = imagebind_model.imagebind_huge(pretrained=True)
-model.eval()
-model.to(device)
+# model = imagebind_model.imagebind_huge(pretrained=True)
+# model.eval()
+# model.to(device)
 
 # Custom Dataset for RGB images
 class ImageDataset(Dataset):
@@ -147,8 +148,47 @@ def main(mode):
     elif mode == "depth":
         extract_depth_frame_embeddings(depth_frames_directory_path, depth_features_path)
 
+def segment_feature_generator(segment_length):
+    narration_feature_directory_path = f"/data/rohith/captain_cook/features/gopro/segments/depth/"
+    segment_narration_feature_directory_path = f"/data/rohith/captain_cook/features/gopro/segments_{segment_length}/depth/"
+    os.makedirs(segment_narration_feature_directory_path, exist_ok=True)
+
+    npz_files = [f for f in os.listdir(narration_feature_directory_path) if f.endswith('.npz')]
+
+    for npz_file in tqdm(npz_files, desc="Processing files"):
+        npz_file_path = os.path.join(narration_feature_directory_path, npz_file)
+        segment_npz_file_path = os.path.join(segment_narration_feature_directory_path, npz_file)
+
+        if os.path.exists(segment_npz_file_path):
+            print(f"Skipping {npz_file}")
+            continue
+
+        # Load the npz file
+        with np.load(npz_file_path) as data:
+            video_embeddings = data['embeddings']
+
+        # Calculate the number of segments
+        num_segments = math.ceil(video_embeddings.shape[0] / segment_length)
+        # num_segments = video_embeddings.shape[0] // segment_length
+
+        # Initialize a list to hold the segment embeddings
+        segment_embeddings = []
+
+        for i in range(num_segments):
+            start = i * segment_length
+            end = start + segment_length
+            segment_embedding = video_embeddings[start:end].mean(axis=0)
+            segment_embeddings.append(segment_embedding)
+
+        # Stack all the segment embeddings into a single tensor
+        stacked_segment_embeddings = np.stack(segment_embeddings)
+
+        # Store embeddings in a npz file
+        np.savez(segment_npz_file_path, video_embeddings=stacked_segment_embeddings)
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str, required=True)
-    args = parser.parse_args()
-    main(args.mode)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--mode", type=str, required=True)
+    # args = parser.parse_args()
+    # main(args.mode)
+    segment_feature_generator(segment_length=2)

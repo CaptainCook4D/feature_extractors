@@ -1,4 +1,5 @@
 import argparse
+import math
 import os
 import json
 
@@ -87,8 +88,14 @@ def main():
     os.makedirs(narration_feature_directory_path, exist_ok=True)
     narration_files = [f for f in os.listdir(narration_directory_path) if f.endswith('.json')]
 
+    filtered_narration_files = [narration_file for narration_file in narration_files if int(narration_file[0])==2]
+    print(f"Total narration files: {len(filtered_narration_files)}")
+
+    # Shuffle the files
+    np.random.shuffle(filtered_narration_files)
+
     # Use tqdm to show progress bar
-    for narration_file in tqdm(narration_files, desc="Processing files"):
+    for narration_file in tqdm(filtered_narration_files, desc="Processing files"):
         video_path = os.path.join(narration_directory_path, narration_file)
         npz_file_name = os.path.splitext(narration_file)[0] + '.npz'
         npz_file_path = os.path.join(narration_feature_directory_path, npz_file_name)
@@ -107,5 +114,45 @@ def main():
             print(f"No embeddings to save for {narration_file}")
 
 
+def segment_feature_generator(segment_length):
+    narration_feature_directory_path = f"/data/rohith/captain_cook/features/gopro/segments/text/"
+    segment_narration_feature_directory_path = f"/data/rohith/captain_cook/features/gopro/segments_{segment_length}/text/"
+    os.makedirs(segment_narration_feature_directory_path, exist_ok=True)
+
+    npz_files = [f for f in os.listdir(narration_feature_directory_path) if f.endswith('.npz')]
+
+    for npz_file in tqdm(npz_files, desc="Processing files"):
+        npz_file_path = os.path.join(narration_feature_directory_path, npz_file)
+        segment_npz_file_path = os.path.join(segment_narration_feature_directory_path, npz_file)
+
+        if os.path.exists(segment_npz_file_path):
+            print(f"Skipping {npz_file}")
+            continue
+
+        # Load the npz file
+        with np.load(npz_file_path) as data:
+            video_embeddings = data['video_embeddings']
+
+        # Calculate the number of segments
+        # num_segments = math.ceil(video_embeddings.shape[0] / segment_length)
+        num_segments = video_embeddings.shape[0] // segment_length
+
+        # Initialize a list to hold the segment embeddings
+        segment_embeddings = []
+
+        for i in range(num_segments):
+            start = i * segment_length
+            end = start + segment_length
+            segment_embedding = video_embeddings[start:end].mean(axis=0)
+            segment_embeddings.append(segment_embedding)
+
+        # Stack all the segment embeddings into a single tensor
+        stacked_segment_embeddings = np.stack(segment_embeddings)
+
+        # Store embeddings in a npz file
+        np.savez(segment_npz_file_path, video_embeddings=stacked_segment_embeddings)
+
+
 if __name__ == "__main__":
-    main()
+    # main()
+    segment_feature_generator(segment_length=2)

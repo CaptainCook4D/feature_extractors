@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 
@@ -32,15 +34,61 @@ def load_video_embeddings(video_feature_path):
 def test_npz():
     import numpy as np
 
-    # Load the .npz file
-    npz_file = np.load('/data/rohith/captain_cook/features/gopro/frames/tsm/1_7_360p.npz')
+    # Load the Depth npz files
+    depth_npz_directory = '/data/rohith/captain_cook/features/gopro/segments_2/depth/'
+    depth_npz_files = os.listdir(depth_npz_directory)
 
-    # List all files/arrays in the npz file
-    print("Contents of the NPZ file:")
-    for file in npz_file.files:
-        print(file)
-        print(npz_file[file])
-        print(npz_file[file].shape)
+    # Load the Text npz files
+    text_npz_directory = '/data/rohith/captain_cook/features/gopro/segments_2/text/'
+    text_npz_files = os.listdir(text_npz_directory)
+
+    # Load the Video npz files
+    video_npz_directory = '/data/rohith/captain_cook/features/gopro/segments_2/video/'
+    video_npz_files = os.listdir(video_npz_directory)
+
+    # Load the Audio npz files
+    audio_npz_directory = '/data/rohith/captain_cook/features/gopro/segments_2/audio/'
+    audio_npz_files = os.listdir(audio_npz_directory)
+
+    # Check if all have the same shape and number of files
+    assert len(depth_npz_files) == len(text_npz_files) == len(video_npz_files) == len(audio_npz_files)
+
+    print("All npz directories have the same number of files")
+
+    mismatch_counter = 0
+
+    for depth_npz_file in depth_npz_files:
+        recording_id = depth_npz_file.split(".")[0]
+
+        depth_npz_file_path = os.path.join(depth_npz_directory, depth_npz_file)
+        with np.load(depth_npz_file_path) as depth_npz_file_data:
+            depth_npz_data = depth_npz_file_data['video_embeddings']
+
+        text_npz_file = f"{recording_id}_360p.npz"
+        text_npz_file_path = os.path.join(text_npz_directory, text_npz_file)
+        with np.load(text_npz_file_path) as text_npz_file_data:
+            text_npz_data = text_npz_file_data['video_embeddings']
+
+        video_npz_file = f"{recording_id}_360p.mp4.npz"
+        video_npz_file_path = os.path.join(video_npz_directory, video_npz_file)
+        with np.load(video_npz_file_path) as video_npz_file_data:
+            video_npz_data = video_npz_file_data['video_embeddings']
+
+        audio_npz_file = f"{recording_id}.wav.npz"
+        audio_npz_file_path = os.path.join(audio_npz_directory, audio_npz_file)
+        with np.load(audio_npz_file_path) as audio_npz_file_data:
+            audio_npz_data = audio_npz_file_data['video_embeddings']
+
+        # Shape Check
+        # assert text_npz_data.shape == video_npz_data.shape == audio_npz_data.shape == depth_npz_data.shape
+        if text_npz_data.shape == video_npz_data.shape == audio_npz_data.shape == depth_npz_data.shape:
+            continue
+        else:
+            mismatch_counter += 1
+            print("-----------------------------------------------------------")
+            print(f"[{recording_id}][{mismatch_counter}] Text: {text_npz_data.shape}, Video: {video_npz_data.shape}, Audio: {audio_npz_data.shape}, Depth: {depth_npz_data.shape}")
+
+            print("-----------------------------------------------------------")
 
 
 def test_pkl():
@@ -79,4 +127,4 @@ def main():
 
 
 if __name__ == "__main__":
-    test_pkl()
+    test_npz()
