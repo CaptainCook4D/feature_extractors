@@ -39,6 +39,6 @@ We have used the following models to extract segment features:
 
 ### Use extracted features
 
-1. You can download all the extracted features used to train all our models from [here](https://utdallas.box.com/s/5w3zeznw8e4banwderuyke4cxwyotrdo)
+1. You can download all the extracted features used to train all our models from [here](https://utdallas.box.com/s/zzuglo0j0loo8ymdsxfr2zzgf9q2jajc)
 
 
